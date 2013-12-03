@@ -134,10 +134,16 @@ $config['ilios_authentication_shibboleth_logout_path'] = '/Shibboleth.sso/Logout
 | ['ilios_ldap_authentication']['bind_dn_template'] Bind DN template.
 |                                                   use %s as placeholder for username substitution.
 |                                                   e.g. 'cn=%s,ou=directory,dc=university,dc=edu'
+| ['ilios_ldap_authentication']['OPT_DEBUG_LEVEL'] LDAP DEBUG LEVEL OPTION
+| ['ilios_ldap_authentication']['OPT_REFERRALS'] LDAP REFERRALS OPTION (Set this option to cope with Windows Server 2003 Active directories)
+| ['ilios_ldap_authentication']['OPT_PROTOCOL_VERSION'] force definition of LDAP protocol version 
 */
 $config['ilios_ldap_authentication']['host'] = 'directory.university.edu';
 $config['ilios_ldap_authentication']['port'] = 389;
 $config['ilios_ldap_authentication']['bind_dn_template'] = 'cn=%s,ou=directory,dc=university,dc=edu';
+$config['ilios_ldap_authentication']['OPT_DEBUG_LEVEL']=0;
+$config['ilios_ldap_authentication']['OPT_REFERRALS']=0;
+$config['ilios_ldap_authentication']['OPT_PROTOCOL_VERSION']=3;
 
 /*
 |--------------------------------------------------------------------------

@@ -333,6 +333,10 @@ class Authentication_Controller extends Ilios_Base_Controller
         // by connecting and binding to the given ldap server with the user-provided credentials
         $ldapConf = $this->config->item('ilios_ldap_authentication');
         $ldapConn = @ldap_connect($ldapConf['host'], $ldapConf['port']);
+		ldap_set_option(NULL, LDAP_OPT_DEBUG_LEVEL, $ldapConf['OPT_DEBUG_LEVEL']);
+ 		ldap_set_option($ldapconn, LDAP_OPT_REFERRALS, $ldapConf['OPT_REFERRALS']);
+		ldap_set_option($ldapconn, LDAP_OPT_PROTOCOL_VERSION, $ldapConf['OPT_PROTOCOL_VERSION']);
+
         if ($ldapConn) {
             $ldapRdn = sprintf($ldapConf['bind_dn_template'], $username);
             $ldapBind = @ldap_bind($ldapConn, $ldapRdn, $password);
