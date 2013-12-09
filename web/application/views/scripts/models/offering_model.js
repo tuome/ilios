@@ -58,6 +58,29 @@ function OfferingModel (dbObject) {
 
             this.startDate = ilios.utilities.mySQLDateToDateObject(dbObject.start_date, true);
             this.endDate = ilios.utilities.mySQLDateToDateObject(dbObject.end_date, true);
+
+            // Add Instructors if available to offering model on creation.  
+            // This was originally in the offering_model_transaction.js file (loadAllOfferings function) -- CA
+            
+            if(typeof dbObject.instructors != 'undefined'){
+            	var instructor2 = null;
+            	var instructors2=dbObject.instructors;
+            	for(var key2 in instructors2){
+                	instructor2 = instructors2[key2];
+                	if (instructor2.instructor_group_id != null) {
+                	    model = new Object();
+                	    model.isGroup = true;
+                	    model.dbId = instructor2.instructor_group_id;
+                	    model.title = instructor2.title;
+                	}
+                	else {
+                		model = new UserModel(instructor2);
+                		model.isGroup = false;
+               		}
+                	this.addInstructor(model);
+            	}
+
+			}
         }
 
         this.publishEventId

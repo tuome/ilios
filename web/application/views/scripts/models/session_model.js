@@ -536,10 +536,11 @@ SessionModel.prototype.getOfferingsEnumerationFormattedHTML = function () {
     var offering = null;
     var start = null;
     var end = null;
-
+	var instructors1 = null;
+	
     for (var key in this.offerings) {
         offering = this.offerings[key];
-
+		instructors1 = offering.getInstructorsAsFormattedText();
         if (rhett.length > 0) {
             rhett += '<br/>';
         }
@@ -555,6 +556,11 @@ SessionModel.prototype.getOfferingsEnumerationFormattedHTML = function () {
         else {
             rhett += end.format('HH:MM TT');
         }
+        // add instructor names if any to listing
+        if(instructors1.trim()!==""){
+        	rhett +=' (' + instructors1 + ')';
+        }
+        
     }
 
     return rhett;

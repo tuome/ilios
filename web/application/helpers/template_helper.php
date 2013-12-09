@@ -30,6 +30,11 @@ if (! function_exists('ilios_print_daytime_options')) {
                 $minutes = '00';
             }
 
+			echo '<option value="' . $string . '">' . $string . '</option>';
+			if($minutes == 45){
+			$string = $hours . ':50';
+				echo '<option value="' . $string . '">' . $string . '</option>';
+			}
             $string = $hours . ':' . $minutes;
 
             echo '<option value="' . $string . '">' . $string . '</option>';

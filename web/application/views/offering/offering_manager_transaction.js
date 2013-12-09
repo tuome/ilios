@@ -403,7 +403,7 @@ ilios.om.transaction.loadAllOfferings = function () {
 
                     offeringModel.setRecurringEvent(model);
                 }
-
+/* **** included in the scripts/models/offering_model.js
                 instructors = offering.instructors;
                 j = 0;
                 len2 = instructors.length;
@@ -423,7 +423,8 @@ ilios.om.transaction.loadAllOfferings = function () {
 
                     offeringModel.addInstructor(model);
                 }
-
+****** end code
+*/
                 learnerGroups = offering.learner_groups;
                 j = 0;
                 len2 = learnerGroups.length;
