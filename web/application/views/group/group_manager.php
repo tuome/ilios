@@ -14,7 +14,7 @@ $viewsPath = getServerFilePath('views');
     <meta name="description" content="">
 
     <!-- Mobile viewport optimized: h5bp.com/viewport -->
-    <meta name="viewport" content="width=device-width">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- Place favicon.ico and apple-touch-icon.png in the root directory: mathiasbynens.be/notes/touch-icons -->
     <link rel="stylesheet" href="<?php echo appendRevision($viewsUrlRoot . "css/ilios-styles.css"); ?>" media="all">
@@ -22,6 +22,8 @@ $viewsPath = getServerFilePath('views');
 
     <style type="text/css"></style>
     <!-- More ideas for your <head> here: h5bp.com/d/head-Tips -->
+
+    <?php include_once $viewsPath . 'common/google_analytics.inc.php'; ?>
 
     <!--[if lt IE 9]>
     <script src="<?php echo $viewsUrlRoot; ?>scripts/third_party/html5shiv.js"></script>
@@ -35,10 +37,12 @@ $viewsPath = getServerFilePath('views');
     <!--  Ilios JS -->
     <script type="text/javascript" src="<?php echo $controllerURL; ?>/getI18NJavascriptVendor"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_base.js"); ?>"></script>
-    <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/models/preferences_model.js"); ?>"></script>
+    <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_alert.js"); ?>"></script>
+    <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_preferences.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_utilities.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_ui.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_dom.js"); ?>"></script>
+    <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_timer.js"); ?>"></script>
     <script type="text/javascript">
         var controllerURL = "<?php echo $controllerURL; ?>/"; // expose this to our group_manager_*.js
         ilios.namespace('gm');          // assure the existence of this page's namespace
@@ -52,6 +56,7 @@ $viewsPath = getServerFilePath('views');
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "group/group_manager_transaction.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "group/subgroup_dom_support.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "group/manage_member_dialog_support.js"); ?>"></script>
+    <?php include_once $viewsPath . 'common/start_idle_page_timer.inc.php'; ?>
 </head>
 <body class="learner yui-skin-sam">
     <div id="wrapper">
@@ -98,18 +103,12 @@ $viewsPath = getServerFilePath('views');
             window.inform = ilios.alert.inform;
         });
 
-        var tmpStr = '<?php echo $institution_name; ?> '
-            + ilios_i18nVendor.getI18NString('general.terms.programs')
-            + ' - '
-            + ilios_i18nVendor.getI18NString('general.phrases.school_of')
-            + ' <?php echo $school_name; ?>';
-
-        ilios.global.installPreferencesModel();
+        ilios.preferences.installPreferencesModel();
 
         YAHOO.util.Event.onDOMReady(ilios.dom.generateGenericDialogMarkupAndWireContent, {
             trigger : 'manage_member_picker_show_dialog',
             remote_data : ilios.gm.mm.ugtDataSource,
-            hide_autocomplete_input : 'you bet',
+            hide_autocomplete_input : true,
             display_handler : ilios.gm.mm.resetUserGroupTree,
             submit_override : ilios.gm.mm.ugtSubmitMethod,
             filter_results_handler : ilios.gm.mm.userGroupTreeFilterResults,
@@ -124,14 +123,13 @@ $viewsPath = getServerFilePath('views');
             load_finish_listener : ilios.gm.mm.userGroupTreeFinishedPopulation
         });
 
-<?php include_once $viewsPath . 'common/start_idle_page_timer.inc.php'; ?>
         YAHOO.util.Event.onDOMReady(ilios.dom.generateSelectAndCloseDialogMarkupAndWireContent, {
             trigger : 'find_cohort_and_program',
             display_handler : ilios.ui.handleProgramCohortSelectionDialogDisplay,
             widget_dom_generator : ilios.ui.programCohortDialogTreeDOMGenerator,
-            tab_title : ilios_i18nVendor.getI18NString('general.phrases.select_cohort'),
+            tab_title : ilios_i18nVendor.getI18NString('general.phrases.available_cohorts'),
             id_uniquer : 'dme_',
-            panel_title_text : tmpStr,
+            title: ilios_i18nVendor.getI18NString('groups.select_program'),
             dom_root : 'cohort_pick_dialog'
         });
 

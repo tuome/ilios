@@ -22,7 +22,7 @@ $viewsPath = getServerFilePath('views');
     <meta name="description" content="">
 
     <!-- Mobile viewport optimized: h5bp.com/viewport -->
-    <meta name="viewport" content="width=device-width">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- Place favicon.ico and apple-touch-icon.png in the root directory: mathiasbynens.be/notes/touch-icons -->
     <link rel="stylesheet" href="<?php echo appendRevision($viewsUrlRoot . "css/ilios-styles.css"); ?>" media="all">
@@ -31,6 +31,8 @@ $viewsPath = getServerFilePath('views');
 
     <style type="text/css"></style>
     <!-- More ideas for your <head> here: h5bp.com/d/head-Tips -->
+
+    <?php include_once $viewsPath . 'common/google_analytics.inc.php'; ?>
 
     <script type="text/javascript">
         var baseURL = "<?php echo $siteUrl; ?>/";
@@ -66,11 +68,13 @@ $viewsPath = getServerFilePath('views');
         ),
         'ilios' => array( // ilios js
             'application/views/scripts/ilios_base.js',
+            'application/views/scripts/ilios_alert.js',
             'application/views/scripts/ilios_utilities.js',
             'application/views/scripts/ilios_ui.js',
             'application/views/scripts/ilios_dom.js',
             'application/views/scripts/models/abstract_js_model_form.js',
-            'application/views/scripts/models/preferences_model.js',
+            'application/views/scripts/ilios_preferences.js',
+            'application/views/scripts/ilios_timer.js',
             'application/views/scripts/models/competency_model.js',
             'application/views/scripts/models/school_competency_model.js',
             'application/views/scripts/models/discipline_model.js',
@@ -102,6 +106,8 @@ $viewsPath = getServerFilePath('views');
     );
     writeJsScripts($js, 'educator_dashboard', $this->config->item('script_aggregation_enabled'), $this->config->item('ilios_revision'));
 ?>
+<?php include_once $viewsPath . 'common/set_user_preferences.inc.php'; ?>
+<?php include_once $viewsPath . 'common/start_idle_page_timer.inc.php'; ?>
 </head>
 <body class="home yui-skin-sam">
     <div id="wrapper">
@@ -142,10 +148,16 @@ $viewsPath = getServerFilePath('views');
                                     </span>
                                 </li>
                                 <li>
-                                    <a href="<?php echo $siteUrl; ?>/calendar_exporter/exportICalendar/instructor" class="medium radius button" title="<?php echo $ical_download_title; ?>">
+                                    <a href="<?php echo $siteUrl; ?>/calendar_controller/exportICalendar/instructor" class="medium radius button" title="<?php echo $ical_download_title; ?>">
                                         <span class="icon-download icon-alone"></span>
                                         <span class="screen-reader-text"><?php echo $ical_download_button; ?></span>
                                     </a>
+                                </li>
+                                <li>
+                                    <span id="ical_feed_btn" title="<?php echo t("dashboard.icalendar.feed_title", false); ?>" class="medium radius button">
+                                        <span class="icon-feed icon-alone"></span>
+                                        <span class="screen-reader-text"><?php echo t("dashboard.icalendar.feed_title"); ?></span>
+                                    </span>
                                 </li>
                             </ul>
                         </div>
@@ -201,7 +213,7 @@ $viewsPath = getServerFilePath('views');
                             </div>
                             <div class="widget_collapse_content bd" id="reports_widget_content" style="display:none;">
                                 <div class="buttons">
-                                    <a href="" class="tiny button" id="report_widget_add_new_div" onclick="IEvent.fire({action: 'report_dialog_open', report_model: null}); return false;">
+                                    <a href="" class="tiny button" id="report_widget_add_new_div" onclick="ilios.ui.onIliosEvent.fire({action: 'report_dialog_open', report_model: null}); return false;">
                                         <?php echo $phrase_add_new_string; ?></a>
                                 </div>
                                 <ul id="reports_widget_list_container"></ul>
@@ -230,12 +242,12 @@ $viewsPath = getServerFilePath('views');
                             <div class="widget_collapse_content bd" id="administration_widget_content" style="display: none;">
                                 <ul>
                                     <li>
-                                        <a href="" onclick="IEvent.fire({action: 'ap_dialog_open'}); return false;">
+                                        <a href="" onclick="ilios.ui.onIliosEvent.fire({action: 'ap_dialog_open'}); return false;">
                                             <?php echo $word_archiving_string; ?>
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="" onclick="IEvent.fire({action: 'rp_dialog_open'}); return false;">
+                                        <a href="" onclick="ilios.ui.onIliosEvent.fire({action: 'rp_dialog_open'}); return false;">
                                             <?php echo $course_rollover_string; ?>
                                         </a>
                                     </li>
@@ -282,7 +294,7 @@ $viewsPath = getServerFilePath('views');
                             </div>
                             <div class="widget_collapse_content bd" id="alerts_widget_content"  style="display: none;">
                                 <div class="buttons">
-                                    <a href="" class="tiny button" id="alert_widget_add_new" onclick="IEvent.fire({action: 'ur_dialog_open', reminder_model: null }); return false;"><?php echo $phrase_add_new_string; ?></a>
+                                    <a href="" class="tiny button" id="alert_widget_add_new" onclick="ilios.ui.onIliosEvent.fire({action: 'ur_dialog_open', reminder_model: null }); return false;"><?php echo $phrase_add_new_string; ?></a>
                                 </div>
                                 <ul id="alerts_widget_list_container">
                                     <li><?php echo $word_none_string; ?></li>
@@ -358,7 +370,8 @@ $viewsPath = getServerFilePath('views');
     </div><!-- end archiving_permissions_dialog -->
 <?php
     include $viewsPath . 'common/course_summary_view_include.php';
-    include $viewsPath . 'home/calendar_filters_dialog.inc.php';;
+    include $viewsPath . 'home/calendar_filters_dialog.inc.php';
+    include $viewsPath . 'home/calendar_feed_dialog.inc.php';
 ?>
     <div class="tabdialog" id="report_competency_pick_dialog"></div>
 
@@ -586,16 +599,8 @@ $viewsPath = getServerFilePath('views');
             window.inform = ilios.alert.inform;
         });
 <?php
-    generateJavascriptRepresentationCodeOfPHPArray($preference_array, 'dbObjectRepresentation', false);
-?>
-        ilios.global.installPreferencesModel();
-        ilios.global.preferencesModel.updateWithServerDispatchedObject(dbObjectRepresentation);
-
-<?php
     include_once $viewsPath . 'common/load_school_competencies.inc.php';
-    include_once $viewsPath . 'common/start_idle_page_timer.inc.php';
 ?>
-
         YAHOO.util.Event.onDOMReady(ilios.dom.generateTreeSelectionDialogMarkupAndWireContent, {
             trigger: 'competency_picker_show_dialog',
             single_selection: 'yup',
@@ -632,6 +637,8 @@ $viewsPath = getServerFilePath('views');
         YAHOO.util.Event.onDOMReady(ilios.home.calendar.assembleCalendarEventDetailsDialog);
 
         YAHOO.util.Event.onDOMReady(ilios.home.calendar.initFilterHooks);
+
+        YAHOO.util.Event.onDOMReady(ilios.home.calendar.initFeedHooks);
 
         YAHOO.util.Event.onDOMReady(ilios.home.report.assembleReportDialog,
             {display_handler: ilios.home.report.resetReportDialog}

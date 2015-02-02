@@ -2,6 +2,7 @@
  * DEPENDENCY: YUI lib (at least YAHOO.util and its dependencies)
  * DEPENDENCY: scripts/ilios_ui.js
  * DEPENDENCY: scripts/ilios_utilities.js
+ * DEPENDENCY: course/course_manager_dom.js
  */
 
 ilios.namespace('cm.rollover');
@@ -41,11 +42,21 @@ ilios.cm.rollover.setRolloverStartDate = function (startDate) {
     var originalDOW = ilios.cm.currentCourseModel.getStartDateAsDateObject().getDay();
 
     if (newDOW != originalDOW) {
+        var stringIdentifiers = [
+            'general.calendar.sunday_long',
+            'general.calendar.monday_long',
+            'general.calendar.tuesday_long',
+            'general.calendar.wednesday_long',
+            'general.calendar.thursday_long',
+            'general.calendar.friday_long',
+            'general.calendar.saturday_long'
+        ];
+
         var msg = ilios_i18nVendor.getI18NString('course_management.rollover.warning.start_date_dow_1')
-                        + " " + ilios.global.getI18NStringForDayOfWeek(newDOW, false)
+                        + " " + ilios_i18nVendor.getI18NString(stringIdentifiers[newDOW])
                         + " "
                         + ilios_i18nVendor.getI18NString('course_management.rollover.warning.start_date_dow_2')
-                        + ", " + ilios.global.getI18NStringForDayOfWeek(originalDOW, false)
+                        + ", " + ilios_i18nVendor.getI18NString(stringIdentifiers[originalDOW])
                         + ", "
                         + ilios_i18nVendor.getI18NString('course_management.rollover.warning.start_date_dow_3');
 
@@ -601,7 +612,7 @@ ilios.cm.rollover.populateDOMForCourseSummary = function () {
         if (element.innerHTML.length > 0) {
             element.innerHTML += '<br/>';
         }
-        element.innerHTML += model.getFormattedName(ilios.utilities.USER_NAME_FORMAT_LAST_FIRST);
+        element.innerHTML += model.getFormattedName(ilios.utilities.UserNameFormatEnum.LAST_FIRST);
     }
 
     element = document.getElementById('r2_discipline_content');

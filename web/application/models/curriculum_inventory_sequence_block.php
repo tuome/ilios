@@ -41,6 +41,7 @@ class Curriculum_Inventory_Sequence_Block extends Ilios_Base_Model
     public function __construct ()
     {
         parent::__construct('curriculum_inventory_sequence_block', array('sequence_block_id'));
+        $this->load->model('Curriculum_Inventory_Sequence_Block_Session', 'blockSession', TRUE);
     }
 
 
@@ -54,10 +55,11 @@ class Curriculum_Inventory_Sequence_Block extends Ilios_Base_Model
         $rhett = false;
         $query = $this->db->get_where($this->databaseTableName, array('sequence_block_id' => $sequenceBlockId));
         if (0 < $query->num_rows()) {
-            $rhett = $query->result_array();
+            $rhett = $query->row_array();
+            $rhett['sessions'] = $this->blockSession->getSessions($rhett['sequence_block_id']);
         }
         $query->free_result();
-        return $rhett[0];
+        return $rhett;
     }
 
     /**
@@ -82,6 +84,7 @@ EOL;
         $query = $this->db->query($sql);
         if (0 < $query->num_rows()) {
             foreach ($query->result_array() as $row) {
+                $row['sessions'] = $this->blockSession->getSessions($row['sequence_block_id']);
                 $rhett[] = $row;
             }
         }

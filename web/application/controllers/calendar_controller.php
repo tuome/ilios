@@ -22,6 +22,10 @@ class Calendar_Controller extends Ilios_Web_Controller
         $this->load->model('School', 'school', TRUE);
         $this->load->model('User', 'user', TRUE);
         $this->load->model('User_Made_Reminder', 'reminder', TRUE);
+        $this->load->model('Authentication', 'authentication', TRUE);
+
+        $this->load->library("ICalExporter");
+        $this->load->library('CalendarFeedDataProvider');
     }
 
     /**
@@ -30,8 +34,6 @@ class Calendar_Controller extends Ilios_Web_Controller
     public function index ()
     {
         $data = array();
-        $data['institution_name'] = $this->config->item('ilios_institution_name');
-        $data['user_id'] = $this->session->userdata('uid');
 
         // authorization check
         $isStudent = $this->session->userdata('is_learner');
@@ -44,7 +46,7 @@ class Calendar_Controller extends Ilios_Web_Controller
 
         $this->output->set_header('Expires: 0');
 
-        $change_school = $this->input->get_post('schoolselect');
+        $change_school = $this->input->get('schoolselect');
         if ($change_school) {
             $this->_setActiveSchool($change_school);
         }
@@ -57,9 +59,6 @@ class Calendar_Controller extends Ilios_Web_Controller
             $schoolId = $this->session->userdata('school_id');
         }
 
-        $userRow = $this->user->getRowForPrimaryKeyId($data['user_id']);
-
-
         $schoolTitle = null;
 
         if ($schoolId) {
@@ -69,7 +68,7 @@ class Calendar_Controller extends Ilios_Web_Controller
             }
         }
 
-        $data['viewbar_title'] = $data['institution_name'];
+        $data['viewbar_title'] = $this->config->item('ilios_institution_name');
 
         if ($schoolTitle != null) {
             $key = 'general.phrases.school_of';
@@ -245,8 +244,6 @@ class Calendar_Controller extends Ilios_Web_Controller
         $key = 'mesh.dialog.title';
         $data['mesh_dialog_title']= $this->languagemap->getI18NString($key);
 
-        $data['preference_array'] = $this->getPreferencesArrayForUser();
-
         $data['render_headerless'] = false;
         $data['show_view_switch'] = false;
 
@@ -346,6 +343,8 @@ class Calendar_Controller extends Ilios_Web_Controller
     /**
      * Get all offerings (except Session Independent Learnings) where the user is in a student group
      *      which has been associated to an offering
+     * Expects the following POST parameters:
+     *     'filters' ...  a json object containing filters
      *
      * @return a JSON'd array with key 'error', or the key 'offerings' with an array of objects -
      *              each object containing the keys offering_id, start_date, end_date,
@@ -367,7 +366,7 @@ class Calendar_Controller extends Ilios_Web_Controller
         $includeArchived = false;
 
         // Retrieve filters params
-        $filters = $this->input->get_post('filters');
+        $filters = $this->input->post('filters');
         if (!empty($filters)) {
             $filters = json_decode($filters);
             if ($filters->showAllActivities) {
@@ -397,6 +396,8 @@ class Calendar_Controller extends Ilios_Web_Controller
     /**
      * Get all Session Independent Learnings where the user is in a student group
      *      which has been associated to a SILM
+     * Expects the following POST parameters:
+     *     'filters' ...  a json object containing filters
      *
      * @return a JSON'd array with key 'error', or the key 'silms' with an array of objects -
      *              each object containing the keys session_id, due_date, course_title, course_id,
@@ -417,7 +418,7 @@ class Calendar_Controller extends Ilios_Web_Controller
         $includeArchived = false;
 
         // Retrieve filters params
-        $filters = $this->input->get_post('filters');
+        $filters = $this->input->post('filters');
         if (!empty($filters)) {
             $filters = json_decode($filters);
             if ($filters->showAllActivities) {
@@ -450,6 +451,8 @@ class Calendar_Controller extends Ilios_Web_Controller
      *      . a course director of a course (so all offerings for all sessions of this course)
      *      . a program year director (so all offerings for all sessions for all courses which have
      *                                      that program year's cohort associated to them)
+     * Expects the following POST parameters:
+     *     'filters' ...  a json object containing filters
      *
      * @return a JSON'd array with key 'error', or the key 'offerings' with an array of objects -
      *              each object containing the keys offering_id, start_date, end_date,
@@ -474,7 +477,7 @@ class Calendar_Controller extends Ilios_Web_Controller
         $includeArchived = false;
 
         // Retrieve filters params
-        $filters = $this->input->get_post('filters');
+        $filters = $this->input->post('filters');
         if (!empty($filters)) {
             $filters = json_decode($filters);
             if ($filters->showAllActivities) {
@@ -502,6 +505,8 @@ class Calendar_Controller extends Ilios_Web_Controller
     /**
      * Get all Session Independent Learnings where the user is an instructor who has been
      *      been associated to a SILM either as themselves or as a member of an instructor group
+     * Expects the following POST parameters:
+     *     'filters' ...  a json object containing filters
      *
      * @return a JSON'd array with key 'error', or the key 'silms' with an array of objects -
      *              each object containing the keys session_id, due_date, course_title, course_id,
@@ -524,7 +529,7 @@ class Calendar_Controller extends Ilios_Web_Controller
         $includeArchived = false;
 
         // Retrieve filters params
-        $filters = $this->input->get_post('filters');
+        $filters = $this->input->post('filters');
         if (!empty($filters)) {
             $filters = json_decode($filters);
             if ($filters->showAllActivities) {
@@ -552,6 +557,103 @@ class Calendar_Controller extends Ilios_Web_Controller
 
         header("Content-Type: text/plain");
         echo json_encode($rhett);
+    }
+
+    /**
+     * This action retrieves and prints the current user's API key. If none exists yet then the key will be created
+     * as part of the process.
+     *
+     * This method prints out a result object as JSON-formatted text.
+     *
+     * On success, the object contains a property "key", which contains the API key as its value.
+     * On failure, the object contains a property "error", which contains an error message as its value.
+     */
+    public function getApiKey ()
+    {
+        $key = $this->authentication->getApiKey($this->session->userdata('uid'));
+        if (false !== $key) {
+            header('Content-type: text/plain');
+            print json_encode(array('key' => $key));
+        } else {
+            $this->createNewApiKey();
+        }
+    }
+
+    /**
+     * This action updates or creates the API key for the current user.
+     *
+     * This method prints out a result object as JSON-formatted text.
+     *
+     * On success, the object contains a property "key", which contains the API key as its value.
+     * On failure, the object contains a property "error", which contains an error message as its value.
+     *
+     * @todo Refactor the actual key generation algorithm out into a utility class/method. [ST 2013/12/13]
+     */
+    public function createNewApiKey ()
+    {
+        $userId = $this->session->userdata('uid');
+
+       $key = Ilios_PasswordUtils::generateToken();
+
+        // check if key already exists.
+        if (false === $this->authentication->getApiKey($userId)) {
+            // create new key
+            $success = $this->authentication->createApiKey($userId, $key);
+        } else {
+            // update key
+            $success = $this->authentication->changeApiKey($userId, $key);
+        }
+
+        header('Content-type: text/plain');
+        if ($success) {
+            print json_encode(array('key' => $key));
+        } else {
+            print json_encode(array('error' => 'Error'));
+        }
+    }
+
+    /**
+     * @todo add code docs
+     * @param string $role
+     */
+    public function exportICalendar ($role='all')
+    {
+        $userRoles = array();
+
+        // authorization check and capture of user requested/available user roles
+        if ($this->session->userdata('is_learner') && ($role == 'all' || $role == 'student')) {
+            $userRoles[] = User_Role::STUDENT_ROLE_ID;
+        }
+        if ($this->session->userdata('has_instructor_access') && ($role == 'all' || $role == 'instructor')) {
+            $userRoles[] = User_Role::FACULTY_ROLE_ID;
+            $userRoles[] = User_Role::COURSE_DIRECTOR_ROLE_ID;
+        }
+        if (! count($userRoles)) {
+            header('HTTP/1.1 403 Forbidden'); // VERBOTEN!
+            return;
+        }
+
+        $userId = $this->session->userdata('uid');
+
+        $schoolId = $this->session->userdata('school_id');
+
+        $events = $this->calendarfeeddataprovider->getData($userId, $schoolId, $userRoles);
+
+        $calendar_title = 'Ilios Calendar';
+        $this->icalexporter->setTitle($calendar_title);
+        $ical = $this->icalexporter->toICal($events);
+
+        $filename="ilios_calendar.ics";
+        header('Last-Modified: '. gmdate('D, d M Y H:i:s', time()) .' GMT');
+        header('Cache-Control: private, must-revalidate, pre-check=0, post-check=0, max-age=0');
+        header('Expires: '. gmdate('D, d M Y H:i:s', 0) .'GMT');
+        header('Pragma: no-cache');
+        header('Accept-Ranges: none');
+        header('Content-disposition: attachment; filename='.$filename);
+        header('Content-length: '.strlen($ical));
+        header('Content-type: text/calendar');
+
+        echo $ical;
     }
 
     /**
@@ -725,4 +827,3 @@ class Calendar_Controller extends Ilios_Web_Controller
         $this->load->view('home/student_calendar_view', $data);
     }
 }
-

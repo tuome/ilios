@@ -23,6 +23,29 @@ ilios.cm.yuiCalendarModificationTarget = { COURSE_START: 'course start',
                                            ROLLOVER_START: 'rollover start',
                                            ROLLOVER_END: 'rollover end' };
 
+ilios.cm.cohortTableColumnDefinitions = [{
+    key: "program",
+    label: ilios_i18nVendor.getI18NString('general.phrases.program_title'),
+    sortable: true,
+    resizeable: true,
+    width: 168
+}, {
+    key: "cohort",
+    label: ilios_i18nVendor.getI18NString('general.terms.cohort'),
+    sortable: true,
+    resizeable: true,
+    width: 155
+}, {
+    key: "level",
+    label: ilios_i18nVendor.getI18NString('course_management.current_level'),
+    formatter: YAHOO.widget.DataTable.formatNumber,
+    sortable: true,
+    resizeable: true,
+    width: 110
+}];
+
+ilios.cm.cohortDataTable = null;
+
 /**
  * Dirty-state change-listener for course and session models.
  * @property dirtyStateListener
@@ -59,22 +82,17 @@ ilios.cm.dirtyStateListener = {
             }
             ilios.dom.setElementEnabled(element, enable);
 
-            //idStr = ilios.cm.generateIdStringForPublishWarning(containerNumber);
-            //element = new Element(document.getElementById(idStr));
             publishability = model.getPublishability();
 
             if ((! enable) || (publishability != model.MEETS_MINIMAL_PUBLISHING_REQUIREMENTS)) {
-//                element.setStyle('display', 'none');
                 YAHOO.util.Dom.removeClass(element, 'icon-warning');
             } else {
-//                element.setStyle('display', 'inline-block');
                 YAHOO.util.Dom.addClass(element, 'icon-warning');
             }
 
             element = document.getElementById('reset_button');
             ilios.dom.setElementEnabled(element, enabled);
 
-            //element = document.getElementById('course_title').parentNode;
             element = YAHOO.util.Dom.getElementsByClassName('level-1', 'div', document.getElementById('course_form'))[0];
 
             if (enabled) {
@@ -117,7 +135,7 @@ ilios.cm.dirtyStateListener = {
         ilios.cm.updatePublishAllUI();
     }
 
-}
+};
 
 /**
  * Dirty-state change-listener for objective models.
@@ -169,7 +187,7 @@ ilios.cm.sessionDescriptionDirtyStateListener = {
             }
         }
     }
-}
+};
 
 
 ilios.cm.displayAddNewCourseDialog = function () {
@@ -213,7 +231,7 @@ ilios.cm.calendarSelectionHandler = function (type, args, obj) {
     var selected = null;
     var selectedDate = null;
     var formattedDate = null;
-    var element = null;
+    var element;
 
     // 'this' is the calendar
     if (this.isProgrammaticallySelectingDates) {
@@ -238,7 +256,7 @@ ilios.cm.calendarSelectionHandler = function (type, args, obj) {
         ilios.cm.rollover.setRolloverStartDate(selectedDate);
     }
 
-    if (element != null) {
+    if (element) {
         element.innerHTML = selectedDate.format('ddd mmm dd yyyy');
     }
 
@@ -268,7 +286,7 @@ ilios.cm.setCalendarToDate = function (dateObject) {
 // @private
 ilios.cm.moveCalendarToDOMElement = function (element) {
     var xyCoordinates = YAHOO.util.Dom.getXY(element);
-    var element = new YAHOO.util.Element(document.getElementById('date_picking_calendar_container'));
+    element = new YAHOO.util.Element(document.getElementById('date_picking_calendar_container'));
 
     element.setStyle('left', (xyCoordinates[0] + 'px'));
     element.setStyle('top', (xyCoordinates[1] + 'px'));
@@ -285,11 +303,23 @@ ilios.cm.registerSaveAndPublishAll = function () {
     var continueStr = ilios_i18nVendor.getI18NString('general.phrases.want_to_continue');
     var yesStr = ilios_i18nVendor.getI18NString('general.terms.yes');
 
+    // Event.addListener(element, 'click', function () {
+    //     ilios.alert.inform('<p style="margin-bottom:9px; text-align:justify;">'
+    //         + saveAllStr + ':</p><center><b>' + continueStr
+    //         + '</b></center>',
+    //         yesStr, ilios.cm.transaction.saveAllDirty);
+    // });
+
+    //temprarily disalbed the dialog while #609 is un-resolved
+    var disabledString = 'Please save each course and session individually; ' +
+        'this feature has been temporarily disabled for security purposes. ' +
+        'If you need assistance, please contact your Ilios Help Desk.';
+    element.title = disabledString;
     Event.addListener(element, 'click', function () {
-        ilios.alert.inform('<p style="margin-bottom:9px; text-align:justify;">'
-            + saveAllStr + ':</p><center><b>' + continueStr
-            + '</b></center>',
-            yesStr, ilios.cm.transaction.saveAllDirty);
+        ilios.alert.alert(
+            '<p style="margin-bottom:9px; text-align:justify;">' +
+            disabledString
+        );
     });
 
     element = document.getElementById('publish_all');
@@ -372,7 +402,7 @@ ilios.cm.registerCourseUIListeners = function () {
         ilios.cm.currentCourseModel.setClerkshipTypeId(this.options[this.selectedIndex].value);
     });
 
-    element = document.getElementById('-1_learning_material_expand_widget');
+    element = document.getElementById('-1_learning_materials_container_expand_widget');
     Event.addListener(element, 'click', function () {
         ilios.cm.lm.setLearningMaterialDivVisibility(-1, this, true);
     });
@@ -431,8 +461,8 @@ ilios.cm.courseLoader = function (courseModelStub) {
                                              document.getElementById('show_more_or_less_link'));
     }
 
-    element = document.getElementById('save_all_dirty_to_draft');
-    ilios.dom.setElementEnabled(element, true);
+    //element = document.getElementById('save_all_dirty_to_draft');
+    // ilios.dom.setElementEnabled(element, true);
 
     ilios.cm.updatePublishAllUI();
 
@@ -443,17 +473,15 @@ ilios.cm.courseLoader = function (courseModelStub) {
         enable = (publishability != ilios.cm.currentCourseModel.CANNOT_BE_PUBLISHED);
     }
     ilios.dom.setElementEnabled(element, enable);
-    //element = new Element(document.getElementById(ilios.cm.generateIdStringForPublishWarning("-1")));
     if ((! enable)
          || (publishability != ilios.cm.currentCourseModel.MEETS_MINIMAL_PUBLISHING_REQUIREMENTS)) {
-    //    element.setStyle('display', 'none');
         YAHOO.util.Dom.removeClass(element, 'icon-warning');
     }
     else {
-    //    element.setStyle('display', 'inline-block');
         YAHOO.util.Dom.addClass(element, 'icon-warning');
     }
 
+    ilios.preferences.installPreferencesModel();
     ilios.cm.handleArchivingLinkVisibility();
     ilios.cm.handleRolloverLinkVisibility();
 
@@ -474,21 +502,18 @@ ilios.cm.updatePublishAllUI = function () {
 
     ilios.dom.setElementEnabled(element, enable);
 
-    //element = new YAHOO.util.Element(document.getElementById('publish_all_warning'));
     if ((! enable)
          || (publishability != ilios.cm.currentCourseModel.MEETS_MINIMAL_PUBLISHING_REQUIREMENTS)) {
-        //element.setStyle('display', 'none');
         YAHOO.util.Dom.removeClass(element,'icon-warning');
     }
     else {
-        //element.setStyle('display', 'inline-block');
         YAHOO.util.Dom.addClass(element,'icon-warning');
     }
 };
 
 ilios.cm.handleArchivingLinkVisibility = function () {
     var element = document.getElementById('archiving_link_div');
-    var showArchiveLink = (ilios.global.preferencesModel.showCourseArchiving()
+    var showArchiveLink = (ilios.preferences.preferencesModel.courseArchiving
                                     && ilios.cm.currentCourseModel.isPublished());
 
     if (showArchiveLink) {
@@ -522,7 +547,7 @@ ilios.cm.handleArchivingLinkVisibility = function () {
 
 ilios.cm.handleRolloverLinkVisibility = function () {
     var element = document.getElementById('rollover_link_div');
-    var showRolloverLink = ilios.global.preferencesModel.showCourseRollover();
+    var showRolloverLink = ilios.preferences.preferencesModel.courseRollover;
 
     if (showRolloverLink) {
         showRolloverLink = ilios.cm.currentCourseModel.isPublished();
@@ -547,7 +572,7 @@ ilios.cm.populateDialogOpeningLink = function (linkDiv, linkStr, dialogOpenActio
     aElement.setAttribute('href', '');
     aElement.setAttribute('onclick', 'return false;');
     YAHOO.util.Event.addListener(aElement, 'click', function (e) {
-        IEvent.fire({
+        ilios.ui.onIliosEvent.fire({
             action: dialogOpenAction
         });
     });
@@ -611,7 +636,7 @@ ilios.cm.populateCourseAndSetEnable = function (title, startDate, endDate, yearS
     element.innerHTML = externalId;
 
     element = document.getElementById('summary-course-year');
-    element.innerHTML = "" + yearStart + "-" + (parseInt(yearStart) + 1);
+    element.innerHTML = "" + yearStart + "-" + (parseInt(yearStart, 10) + 1);
 
     element = document.getElementById('summary-course-level');
     element.innerHTML = "Level" + courseLevel;
@@ -620,7 +645,7 @@ ilios.cm.populateCourseAndSetEnable = function (title, startDate, endDate, yearS
     element.value = externalId;
 
     element = document.getElementById('course_year_start');
-    element.innerHTML = "" + yearStart + "-" + (parseInt(yearStart) + 1);
+    element.innerHTML = "" + yearStart + "-" + (parseInt(yearStart, 10) + 1);
 
     element = document.getElementById('course_start_date');
     dateObject = ilios.utilities.mySQLTimelessDateToDateObject(startDate);
@@ -747,7 +772,7 @@ ilios.cm.populateCourseAndSetEnable = function (title, startDate, endDate, yearS
 
     ilios.cm.currentCourseModel.addStateChangeListener(ilios.cm.dirtyStateListener, null);
 
-    ilios.cm.lm.populateLearningMaterialList(-1);
+    ilios.cm.lm.populateLearningMaterialsContainer(-1);
 
     ilios.cm.refreshCohortData();
 
@@ -760,10 +785,15 @@ ilios.cm.populateCourseAndSetEnable = function (title, startDate, endDate, yearS
 
 ilios.cm.repopulateListedCourseCompetencies = function (initialPopulation) {
     var element = document.getElementById('-1_competency_picker_selected_text_list');
+
+    // If this is called twice, we want to replace the list, not append it again.
+    // So remove anything that's already in the element.
+    element.innerHTML = '';
+
     var objectives = initialPopulation ? null : ilios.cm.currentCourseModel.getObjectives();
     var boundingObjectives = initialPopulation ? null : ilios.cm.programCohortObjectives;
 
-    element.innerHTML = ilios.competencies.generateListHTMLForSelectedCompetencies(
+    ilios.competencies.appendListForSelectedCompetencies(element,
         ilios.cm.currentCourseModel.getCompetencies(), objectives, boundingObjectives);
 };
 
@@ -815,7 +845,7 @@ ilios.cm.generateIdStringForPublishWarning = function (containerNumber) {
 ilios.cm.appendAttributeDisplayBlock = function (parentElement, containerNumber, labelString,
                                                  searchEventName, uiTextFieldSuffix, stackVertical,
                                                  textFieldContent) {
-    var clickFunction = function (e) {IEvent.fire({action: 'default_dialog_open',
+    var clickFunction = function (e) {ilios.ui.onIliosEvent.fire({action: 'default_dialog_open',
                                                     event: searchEventName,
                                                     container_number: containerNumber});};
 
@@ -876,7 +906,7 @@ ilios.cm.deleteObjective = function (event) {
     var args = {
         "cnumber": target.getAttribute("cnumber"),
         "onumber": target.getAttribute("onumber")
-    }
+    };
     ilios.alert.inform(deleteObjectiveStr, yesStr, ilios.cm.continueDeletingObjective, args);
 };
 
@@ -899,7 +929,7 @@ ilios.cm.continueDeletingObjective = function(event, obj) {
     model.removeObjectiveForContainer(objectiveNumber);
     ilios.cm.updateObjectiveCountText(containerNumber);
     this.hide();
-}
+};
 
 /**
  * Initiates the addition of a new objective to a course by firing up the "session objective" dialog.
@@ -908,7 +938,7 @@ ilios.cm.continueDeletingObjective = function(event, obj) {
  */
 ilios.cm.addNewCourseObjective = function (containerNumber) {
     ilios.cm.inEditObjectiveModel = null;
-    IEvent.fire({
+    ilios.ui.onIliosEvent.fire({
         action: 'eco_dialog_open'
     });
 };
@@ -920,7 +950,7 @@ ilios.cm.addNewCourseObjective = function (containerNumber) {
  */
 ilios.cm.addNewSessionObjective = function (containerNumber) {
     ilios.cm.inEditObjectiveModel = null;
-    IEvent.fire({
+    ilios.ui.onIliosEvent.fire({
         action: 'eso_dialog_open',
         cnumber: containerNumber
     });
@@ -1082,9 +1112,9 @@ ilios.cm.domForEditCourseParentObjectiveElement = function (objectiveModel, sele
 };
 
 ilios.cm.getArrayOfCurrentlySelectedParentObjectives = function () {
-    var rhett = new Array();
+    var rhett = [];
     var objectivesDiv = document.getElementById('eco_parent_objectives_div');
-    var selectedObjectiveModel = null
+    var selectedObjectiveModel = null;
     var children = objectivesDiv.children;
 
     for (var i = 0; i < children.length; i++) {
@@ -1186,7 +1216,7 @@ ilios.cm.buildAndPopulateObjective = function (containerNumber, objectiveNumber,
     var scratchInput = null;
     var Event = YAHOO.util.Event;
     var Element = YAHOO.util.Element;
-    var isLocked = isLocked || false;
+    isLocked = isLocked || false;
 
     newObjectiveContainer.setAttribute('class', 'objective_container');
     newObjectiveContainer.setAttribute('cnumber', containerNumber);
@@ -1218,7 +1248,7 @@ ilios.cm.buildAndPopulateObjective = function (containerNumber, objectiveNumber,
             // register click event handler on objective description container
             Event.addListener(scratchElement, "click", function (e) { // pop up the "edit objective" dialog
                 ilios.cm.inEditObjectiveModel = objectiveModel;
-                IEvent.fire({
+                ilios.ui.onIliosEvent.fire({
                     action: 'eco_dialog_open'
                 });
             });
@@ -1226,7 +1256,7 @@ ilios.cm.buildAndPopulateObjective = function (containerNumber, objectiveNumber,
                     // register click event handler on objective description container
             Event.addListener(scratchElement, "click", function (e) { // pop up the "edit objective" dialog
                 ilios.cm.inEditObjectiveModel = objectiveModel;
-                IEvent.fire({
+                ilios.ui.onIliosEvent.fire({
                     action: 'eso_dialog_open',
                     cnumber: containerNumber
                 });
@@ -1242,7 +1272,7 @@ ilios.cm.buildAndPopulateObjective = function (containerNumber, objectiveNumber,
     scratchInput.setAttribute('onclick', 'return false;');
     if (! isLocked) {
         Event.addListener(scratchInput, 'click', function (e) {
-            IEvent.fire({
+            ilios.ui.onIliosEvent.fire({
                 action: 'mesh_picker_dialog_open',
                 model_in_edit: objectiveModel
             });
@@ -1272,7 +1302,7 @@ ilios.cm.updateObjectiveCountText = function (containerNumber) {
     var i18nStr = ilios_i18nVendor.getI18NString('general.phrases.learning_objectives');
     var element = document.getElementById(idString);
 
-    element.innerHTML = i18nStr + ' (' + ilios.utilities.arraySize(model.getObjectives()) + ')';
+    element.innerHTML = i18nStr + ' (' + ilios.utilities.objectPropertyCount(model.getObjectives()) + ')';
 };
 
 // @private
@@ -1368,7 +1398,7 @@ ilios.cm.setDisplayAsLocked = function () {
     element = new Element(document.getElementById('mesh_search_link'));
     element.setStyle('display', 'none');
 
-    element = new Element(document.getElementById('course_learning_material_search_link'));
+    element = new Element(document.getElementById('add_learning_material_link'));
     element.setStyle('display', 'none');
 
     element = new Element(document.getElementById('add_objective_link'));
@@ -1440,7 +1470,7 @@ ilios.cm.meshLinkText = function (model) {
 };
 
 ilios.cm.displayMeSHDialogForCourse = function () {
-    IEvent.fire({action: 'mesh_picker_dialog_open', model_in_edit: ilios.cm.currentCourseModel});
+    ilios.ui.onIliosEvent.fire({action: 'mesh_picker_dialog_open', model_in_edit: ilios.cm.currentCourseModel});
 };
 
 ilios.common.picker.mesh.handleMeSHPickerSave = function (dialogPanel) {
@@ -1455,7 +1485,7 @@ ilios.common.picker.mesh.handleMeSHPickerSave = function (dialogPanel) {
             var model = null;
 
             element = document.getElementById('ilios_lm_mesh');
-            if (element != null) {
+            if (element) {
                 element.innerHTML
                                 = ilios.mesh.meshInEditReferenceModel.getMeSHItemsAsFormattedText();
             }
@@ -1466,7 +1496,7 @@ ilios.common.picker.mesh.handleMeSHPickerSave = function (dialogPanel) {
             else {
                 model = ilios.cm.currentCourseModel.getSessionForContainer(containerNumber);
             }
-            model.setDirtyAndNotify();
+            ilios.common.lm.learningMaterialsDetailsModel.setDirty();
         }
     }
 
@@ -1494,7 +1524,7 @@ ilios.cm.populateReviewForFullReview = function () {
 
     heading.innerHTML = ilios.cm.currentCourseModel.getTitle() + ' - '
                         + ilios.cm.currentCourseModel.getYear() + '-'
-                        + (parseInt(ilios.cm.currentCourseModel.getYear()) + 1);
+                        + (parseInt(ilios.cm.currentCourseModel.getYear(), 10) + 1);
     level.innerHTML = ilios_i18nVendor.getI18NString('general.phrases.course_level')
                         + ':  <span>' + ilios.cm.currentCourseModel.getCourseLevel() + '</span>';
 
@@ -1558,9 +1588,6 @@ ilios.cm.populateReviewForFullReview = function () {
 
     container = new YAHOO.util.Element(document.getElementById('full_review'));
     container.setStyle('display', 'block');
-
-//    element = new Element(document.getElementById('r_dialog_wrap'));
-//    element.setStyle('height', '626px');
 };
 
 ilios.cm.populateReviewForCourseReview = function () {
@@ -1570,7 +1597,7 @@ ilios.cm.populateReviewForCourseReview = function () {
 
     heading.innerHTML = ilios.cm.currentCourseModel.getTitle() + ' - '
                         + ilios.cm.currentCourseModel.getYear() + '-'
-                        + (parseInt(ilios.cm.currentCourseModel.getYear()) + 1);
+                        + (parseInt(ilios.cm.currentCourseModel.getYear(), 10) + 1);
     level.innerHTML = ilios_i18nVendor.getI18NString('general.phrases.course_level')
                         + ':  <span>' + ilios.cm.currentCourseModel.getCourseLevel() + '</span>';
 
@@ -1610,7 +1637,7 @@ ilios.cm.populateReviewForSessionReviewForContainer = function (containerNumber)
 
     heading.innerHTML = ilios.cm.currentCourseModel.getTitle() + ' - '
                         + ilios.cm.currentCourseModel.getYear() + '-'
-                        + (parseInt(ilios.cm.currentCourseModel.getYear()) + 1);
+                        + (parseInt(ilios.cm.currentCourseModel.getYear(), 10) + 1);
     level.innerHTML = ilios_i18nVendor.getI18NString('general.phrases.course_level')
                         + ':  <span>' + ilios.cm.currentCourseModel.getCourseLevel() + '</span>';
 
@@ -1639,6 +1666,48 @@ ilios.cm.populateReviewForSessionReviewForContainer = function (containerNumber)
 
     element = new Element(document.getElementById('session_review'));
     element.setStyle('display', 'block');
+};
+
+ilios.cm.setEnabledStateForCourseContainerUI = function (enabled) {
+    var element;
+
+    element = document.getElementById('add_new_session_link');
+    ilios.dom.setElementEnabled(element, enabled);
+
+    element = document.getElementById('add_objective_link');
+    ilios.dom.setEnableForAElement(element, enabled);
+
+    element = document.getElementById('directors_search_link');
+    ilios.dom.setEnableForAElement(element, enabled);
+
+    element = document.getElementById('disciplines_search_link');
+    ilios.dom.setEnableForAElement(element, enabled);
+
+    element = document.getElementById('mesh_search_link');
+    ilios.dom.setEnableForAElement(element, enabled);
+
+    element = document.getElementById('select_cohorts_link');
+    ilios.dom.setEnableForAElement(element, enabled);
+
+    element = document.getElementById('show_more_or_less_link');
+    ilios.dom.setEnableForAElement(element, enabled);
+
+    element = document.getElementById('show_course_summary_link');
+    ilios.dom.setEnableForAElement(element, enabled);
+
+    element = document.getElementById('course_level_selector');
+    ilios.dom.setElementEnabled(element, enabled);
+
+    element = document.getElementById('add_learning_material_link');
+    ilios.dom.setEnableForAElement(element, enabled);
+
+    element = document.getElementById('external_course_id');
+    ilios.dom.setElementEnabled(element, enabled);
+};
+
+// @private
+ilios.cm.setupCourseContainerUIComponents = function (un, deux, trois) {
+    ilios.cm.setEnabledStateForCourseContainerUI(false);
 };
 
 // @private
@@ -1696,3 +1765,180 @@ ilios.cm.populateReviewDetailsInContainer = function (container, model) {
         container.appendChild(listItem);
     }
 };
+
+/**
+ * @method initDialog()
+ * Initializes the dialog and rigs event handling up to it.
+ */
+ilios.cm.disc_initDialog = function (who, knows, args) {
+    var autolistContainer = "discipline_autolist";
+    var textInputFieldForAutoComplete = "discipline_name_input";
+    var disc_currentlySelectedModels = [];
+    var disc_dataSource = new YAHOO.util.XHRDataSource(controllerURL + 'getDisciplineList');
+    var disc_hiddenFormElement = "discipline_hidden_input";
+    var disc_listingTextField = "discipline_picker_selected_text_list";
+    var disc_selectedItemContainer = "discipline_picked";
+
+    disc_dataSource.responseType = YAHOO.util.XHRDataSource.TYPE_XML;
+    disc_dataSource.responseSchema = { resultNode: "Result", fields: ["title", "discipline_id"] };
+    /*
+     * dialog has an attribute set on it through its display handler which represents the
+     * container number for which it is about to display.
+     */
+    var simpleCourseModelReturn = function (dialog) {
+        if (dialog.containerNumber != -1) {
+            return ilios.cm.currentCourseModel.getSessionForContainer(dialog.containerNumber);
+        }
+        return ilios.cm.currentCourseModel;
+    };
+
+    /*
+     * This will get messaged just prior to the dialog being displayed to the user.
+     *
+     * @param dialog a handle to the actual dialog instance which is about to be
+     *            displayed
+     * @see ilios.dom.buildDialogPanel
+     */
+    var disc_handleDialogDisplay = function (dialog) {
+
+        var i, n;
+        var parentModel = simpleCourseModelReturn(dialog);
+        var picker = document.getElementById( disc_selectedItemContainer);
+        var localModels = parentModel.getDisciplines();
+        var selectedModels = [];
+        picker.innerHTML = "";
+
+        selectedModels = null;
+
+        if (localModels != null) {
+            var model = null;
+            var liElement = null;
+            selectedModels = localModels.slice(0);
+
+            // repopulate picker list to reflect the display
+            for (i = 0, n = selectedModels.length; i < n; i++) {
+                model = selectedModels[i];
+                liElement = document.createElement("li");
+                liElement.iliosModel = model;
+                liElement.innerHTML = model.title;
+                picker.appendChild(liElement);
+            }
+        }
+        disc_currentlySelectedModels = selectedModels;
+        return true;
+    }; // end function
+
+
+    /*
+     * This will get messaged when the user clicks the submit button on the dialog (this
+     *        button is currently display-text'd as "Done")
+     *
+     * @see ilios.dom.buildDialogPanel
+     */
+    var disc_submitMethod = function () {
+
+        var textFieldContent = "";
+        var modelTitles = [];
+        var i, n;
+        var containerNumber = this.containerNumber; // "this" should be the Dialog instance
+        var inputTextId = containerNumber + "_" + disc_listingTextField;
+        var parentModel = simpleCourseModelReturn(this);
+        var element = null;
+        var selectedModels = disc_currentlySelectedModels;
+
+        parentModel.setDisciplines(selectedModels);
+
+        for (i = 0, n = selectedModels.length; i < n; i++) {
+            modelTitles.push(selectedModels[i].getTitle());
+        }
+        modelTitles.sort();
+        textFieldContent = modelTitles.join(";");
+
+        element = document.getElementById(inputTextId);
+        element.textContent = textFieldContent;
+    }; // end function
+
+    /*
+     * We'll receive notification via this when the user click-deletes an item from the
+     *    selected list.
+     *
+     * @param event actual click event
+     * @see ilios.dom.generateAutoCompleteDialogMarkup
+     */
+    var disc_handleDeselect = function (event) {
+
+        var i, n;
+        var model;
+        var selectedModels = disc_currentlySelectedModels;
+        var target = ilios.utilities.getEventTarget(event);
+        var listElement = document.getElementById("discipline_picked");
+        if ("li" === target.tagName.toLowerCase()) {
+            model = target.iliosModel;
+            for (i = 0, n = selectedModels.length; i < n; i++) {
+                if (model.getDBId() === selectedModels[i].getDBId()) {
+                    selectedModels.splice(i, 1);
+                    break;
+                }
+            }
+        }
+    }; // end function
+
+    /*
+     * We'll receive notification via this when the user click-selects an item from the
+     *    candidate list.
+     *
+     * @param rowSelection a map of the db row data representation for the user's selection
+     * @see ilios.ui.setupDialogAutoComplete
+     */
+    var disc_handleSelect = function (rowSelection) {
+
+        var model = new DisciplineModel();
+        model.setDBId(rowSelection.discipline_id);
+        model.setTitle(rowSelection.title);
+
+        var listElement = document.getElementById("discipline_picked");
+        var liElement = document.createElement("li");
+        var textNode = document.createTextNode(model.getTitle());
+        var selectedModels = disc_currentlySelectedModels;
+
+        selectedModels.push(model);
+
+        liElement.appendChild(textNode);
+        liElement.iliosModel = model;
+
+        listElement.appendChild(liElement);
+
+        return liElement;
+    }; // end function
+
+    ilios.dom.generateAutoCompleteDialogMarkup({
+        deselect_handler: disc_handleDeselect,
+        selected_label: "general.terms.topics",
+        instructions: "general.text.discipline_search_instructions",
+        container: args.container,
+        hidden: disc_hiddenFormElement,
+        tabs: {autocomplete: "discipline_autocomplete_tab"},
+        acinput: textInputFieldForAutoComplete,
+        aclist: autolistContainer,
+        picked: disc_selectedItemContainer
+    });
+
+    ilios.dom.buildDialogPanel({}, {}, {
+        trigger: args.trigger,
+        target: disc_selectedItemContainer,
+        hidden: disc_hiddenFormElement,
+        input: disc_listingTextField,
+        submit_override: disc_submitMethod,
+        display_handler: disc_handleDialogDisplay,
+        container: args.container
+    });
+
+    ilios.ui.setupDialogAutoComplete({
+        target: disc_selectedItemContainer,
+        input: textInputFieldForAutoComplete,
+        container: autolistContainer,
+        remote_data: disc_dataSource,
+        select_handler: disc_handleSelect,
+        max_displayed_results: 150
+    });
+}; // end function

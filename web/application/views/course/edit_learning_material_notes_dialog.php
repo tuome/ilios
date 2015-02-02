@@ -72,7 +72,7 @@
                 else {
                     model = ilios.cm.currentCourseModel.getSessionForContainer(containerNumber);
                 }
-                model.setDirtyAndNotify();
+                ilios.common.lm.learningMaterialsDetailsModel.setDirty();
 
                 ilios.cm.editLearningMaterialNotesDialog.cancel();
             };
@@ -138,7 +138,7 @@
                     dialog.showDialogPane();
                 }
             };
-            IEvent.subscribe(displayOnTriggerHandler);
+            ilios.ui.onIliosEvent.subscribe(displayOnTriggerHandler);
 
             ilios.cm.editLearningMaterialNotesDialog = dialog;
         };

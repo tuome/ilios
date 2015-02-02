@@ -1,4 +1,4 @@
-/*
+/**
  * DEPENDENCY: YUI lib (at least YAHOO.util and its dependencies)
  * DEPENDENCY: DHTMLX Scheduler
  * DEPENDENCY: scripts/ilios_ui.js
@@ -17,6 +17,9 @@ ilios.om.calendar.lastStartDateUsedInAddingEvents = null;
 ilios.om.calendar.lastEndDateUsedInAddingEvents = null;
 ilios.om.calendar.lastModeUsedInAddingEvents = null;
 
+//get the calendar option overrides set in the config file
+ilios.om.calendar.optionsOverrides = ilios.global.readJsonFromDom('calendarOptionsOverrides');
+
 /**
  * This is called onDOMReady; added to that event queue in offering_manager.php. This sets
  *     up the configuration of the DHTMLX scheduler canvas including registering for event
@@ -31,7 +34,8 @@ ilios.om.calendar.initCalendar = function () {
     scheduler.config.scroll_hour = 8;
 
     scheduler.config.start_on_monday = false;
-    scheduler.config.time_step = 15;
+    //use the value set in the config file
+    scheduler.config.time_step = ilios.om.calendar.optionsOverrides.time_step;
 
     scheduler.config.edit_on_create = false;
     scheduler.config.details_on_create = true;
@@ -96,7 +100,7 @@ ilios.om.calendar.resetCurrentCalendarViewToStart = function () {
     var dateEnd = ilios.om.calendarStartDate;
     var offeringModels = sessionModel.getOfferings();
 
-    if (ilios.utilities.arraySize(offeringModels) > 0) {
+    if (ilios.utilities.objectPropertyCount(offeringModels) > 0) {
     var model = null;
 
     dateBegin = new Date(offeringModels[0].getStartDate().getTime());
@@ -117,7 +121,7 @@ ilios.om.calendar.resetCurrentCalendarViewToStart = function () {
     scheduler.setCurrentView(dateBegin, 'week');
 };
 
-/*
+/**
  * Changes the calendar view to a specified date preserving the present view mode.
  *
  * Should be considered @protected
@@ -313,7 +317,7 @@ ilios.om.calendar.calendarViewChanged = function (mode, date) {
 
 };
 
-/*
+/**
  * This method generates the text which is rendered in the visible calendar event.
  *
  * Should be considered @protected
@@ -333,7 +337,7 @@ ilios.om.calendar.generateEventObjectDisplayTextForModel = function (model) {
     return eventText;
 };
 
-/*
+/**
  * @private
  */
 ilios.om.calendar.generateEventTypeForModel = function (model) {
@@ -452,7 +456,7 @@ ilios.om.calendar.addEventsFromModelToScheduler = function (viewStartDate, viewM
     ilios.om.calendar.lastModeUsedInAddingEvents = viewMode;
 };
 
-/*
+/**
  * This is called on a successful save of an offering where its recurrence has been saved for the
  *  first time.
  *
@@ -512,7 +516,7 @@ ilios.om.calendar.createEventsResultingFromRecurrence = function (offeringModel)
     }
 };
 
-/*
+/**
  * This is a helper method to calculate how many days are between the current day (day, not date)
  *  and the next day (day, not date) of an offering as defined by the pattern.
  *
@@ -528,7 +532,7 @@ ilios.om.calendar.getDayDeltaToNextRecurrence = function (currentDay, dayPattern
     return (rhett - currentDay);
 };
 
-/*
+/**
  * @return a javascript Date instance for 00:00:00 (local TZ) last Sunday (or the param, if it's Sunday)
  *
  * Should be considered @private
@@ -548,7 +552,7 @@ ilios.om.calendar.getLastSundayForDate = function (originalDate) {
     return rhett;
 };
 
-/*
+/**
  * @return a javascript Date instance for 00:00:00 (local TZ) on the first day of the month of the param
  *
  * Should be considered @private
@@ -564,7 +568,7 @@ ilios.om.calendar.getFirstOfMonthForDate = function (originalDate) {
     return rhett;
 };
 
-/*
+/**
  * This is a helper method used to calculate where, in terms of the spatial coordinates of the
  *  parentContainer laid out in the browser page UI, a given date range should sit.
  *
@@ -593,7 +597,7 @@ ilios.om.calendar.getSchedulerSpatialLocationForDateRange = function (parentCont
     return rhett;
 };
 
-/*
+/**
  * This method clears and then inserts appropriate DIVs into the scheduler canvas in order to
  *  render busy times in the calendar display.
  *
@@ -651,7 +655,7 @@ ilios.om.calendar.renderBusyEvents = function (busyArray, uniqueClassFamilyName)
     }
 };
 
-/*
+/**
  * @param date a javascript date object
  *
  * Should be considered @private
@@ -661,7 +665,7 @@ ilios.om.calendar.isDateInCurrentView = function (date) {
                                     && (date < ilios.om.calendar.lastEndDateUsedInAddingEvents));
 };
 
-/*
+/**
  * @param viewStartDate if null, ilios.om.calendar.lastStartDateUsedInAddingEvents
  *                                  & ilios.om.calendar.lastModeUsedInAddingEvents
  *                          will be used
@@ -690,7 +694,7 @@ ilios.om.calendar.getCurrentViewEndDate = function (viewStartDate, viewMode) {
     return rhett;
 };
 
-/*
+/**
  * Removes all busy event divs from the DOM.
  *
  * @param uniqueClassFamilyName typically one of the constants defined in the offering_manager_dom
@@ -710,7 +714,7 @@ ilios.om.calendar.deleteAllBusyEventDivsWithUniqueClassName = function (uniqueCl
     }
 };
 
-/*
+/**
  * This function will be passed to Array.sort() when an array instance is homogenous in
  *  OfferingModel and we want that array sorted for earliest start -> latest start; in the case
  *  of two OM with the same start, and a secondary comparison is performed to sort the one with the

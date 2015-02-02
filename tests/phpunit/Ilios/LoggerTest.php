@@ -20,13 +20,13 @@ class Ilios_LoggerTest extends Ilios_TestCase
      */
     public function providerTestLog ()
     {
-    	return array(
-    	    array('', 100, 0, Ilios_Logger::LOG_LEVEL_INFO, "/\\[I\\]\\[p:100\\]  /"),
+        return array(
+            array('', 100, 0, Ilios_Logger::LOG_LEVEL_INFO, "/\\[I\\]\\[p:100\\]  /"),
             array('foo', 1000, 0, Ilios_Logger::LOG_LEVEL_INFO, "/\\[I\\]\\[p:1000\\]  foo/"),
-    	    array('bar', 1000, 1, Ilios_Logger::LOG_LEVEL_WARN, "/\\[W\\]\\[p:1000\\]    bar/"),
-    	    array('baz', 11, 2, Ilios_Logger::LOG_LEVEL_DEBUG, "/\\[D\\]\\[p:11\\]      baz/"),
-    	    array('babba booey', null, 3, Ilios_Logger::LOG_LEVEL_ERROR, "/\\[E\\]        babba booey/")
-    	);
+            array('bar', 1000, 1, Ilios_Logger::LOG_LEVEL_WARN, "/\\[W\\]\\[p:1000\\]    bar/"),
+            array('baz', 11, 2, Ilios_Logger::LOG_LEVEL_DEBUG, "/\\[D\\]\\[p:11\\]      baz/"),
+            array('babba booey', null, 3, Ilios_Logger::LOG_LEVEL_ERROR, "/\\[E\\]        babba booey/")
+        );
     }
 
 
@@ -60,7 +60,7 @@ class Ilios_LoggerTest extends Ilios_TestCase
      */
     public function testGetInstanceFailure ()
     {
-    	$logger1 = Ilios_Logger::getInstance('/some/path/to/a/logfile/that/doesnt/exist.log');
+        $logger1 = Ilios_Logger::getInstance('/some/path/to/a/logfile/that/doesnt/exist.log');
     }
 
     /**
@@ -150,6 +150,63 @@ class Ilios_LoggerTest extends Ilios_TestCase
     }
 
     /**
+     * @test
+     * @covers Ilios_Logger::rotate()
+     * @see Ilios_Logger::rotate()
+     * @group ilios
+     * @group log
+     */
+    public function testNoRotate ()
+    {
+        $path = tempnam(sys_get_temp_dir(), 'rotateTest');
+        $length = Ilios_Logger::LOG_FILE_ROTATE_SIZE - 1;
+        $longString = '';
+        for($i = 0; $i < $length; $i++){
+            $longString .= 'a';
+        }
+        file_put_contents($path, $longString);
+        $logger = Ilios_Logger::getInstance($path);
+        $rotated = $logger->rotate();
+        unset($logger);
+        clearstatcache();
+        $this->assertFalse($rotated);
+        $this->assertEquals(filesize($path), $length);
+        unlink($path);
+    }
+
+    /**
+     * @test
+     * @covers Ilios_Logger::rotate()
+     * @see Ilios_Logger::rotate()
+     * @group ilios
+     * @group log
+     */
+    public function testRotate ()
+    {
+        $path = tempnam(sys_get_temp_dir(), 'rotateTest');
+        $length = Ilios_Logger::LOG_FILE_ROTATE_SIZE + 1;
+        $longString = '';
+        for($i = 0; $i < $length; $i++){
+            $longString .= 'a';
+        }
+        file_put_contents($path, $longString);
+        $logger = Ilios_Logger::getInstance($path);
+        $rotated = $logger->rotate();
+        unset($logger);
+        clearstatcache();
+        $this->assertTrue($rotated !== false);
+        $this->assertTrue(file_exists($rotated));
+        $this->assertEquals(filesize($path), 0);
+        $fp = gzopen($rotated, "r");
+        $this->assertTrue($fp !== false);
+        $contents = gzread($fp, $length);
+        $this->assertEquals(strlen($longString), strlen($contents));
+        $this->assertEquals($longString, $contents);
+        unlink($rotated);
+        unlink($path);
+    }
+
+    /**
      * Test-utility function.
      * Returns the static protected "$_registry" property from the Ilios_Logger class
      * by deliberately breaking encapsuling.
@@ -179,15 +236,15 @@ class Ilios_LoggerTest extends Ilios_TestCase
         $c = null;
         do {
             fseek($fp, $pos--);
-        	$c = fgetc($fp);
+            $c = fgetc($fp);
         } while (PHP_EOL == $c);
 
         // read last line
         do {
             $line = $c . $line;
-        	if (fseek($fp, $pos--) == -1)
+            if (fseek($fp, $pos--) == -1)
                 break;
-        	$c = fgetc($fp);
+            $c = fgetc($fp);
         } while (PHP_EOL != $c);
 
         fclose($fp); // cleanup

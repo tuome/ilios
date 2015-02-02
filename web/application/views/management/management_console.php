@@ -19,7 +19,7 @@ $viewsPath = getServerFilePath('views');
     <meta name="description" content="">
 
     <!-- Mobile viewport optimized: h5bp.com/viewport -->
-    <meta name="viewport" content="width=device-width">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- Place favicon.ico and apple-touch-icon.png in the root directory: mathiasbynens.be/notes/touch-icons -->
     <link rel="stylesheet" href="<?php echo appendRevision($viewsUrlRoot . "css/ilios-styles.css"); ?>" media="all">
@@ -35,6 +35,8 @@ $viewsPath = getServerFilePath('views');
 
     <!-- More ideas for your <head> here: h5bp.com/d/head-Tips -->
 
+    <?php include_once $viewsPath . 'common/google_analytics.inc.php'; ?>
+
     <!--[if lt IE 9]>
     <script src="<?php echo $viewsUrlRoot; ?>scripts/third_party/html5shiv.js"></script>
     <![endif]-->
@@ -47,10 +49,12 @@ $viewsPath = getServerFilePath('views');
     <!-- Ilios JS -->
     <script type="text/javascript" src="<?php echo $controllerURL; ?>/getI18NJavascriptVendor"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_base.js"); ?>"></script>
-    <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/models/preferences_model.js"); ?>"></script>
+    <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_alert.js"); ?>"></script>
+    <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_preferences.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_dom.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_ui.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_utilities.js"); ?>"></script>
+    <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_timer.js"); ?>"></script>
     <script type="text/javascript">
         var controllerURL = "<?php echo $controllerURL; ?>/";    // expose this to our *.js
 
@@ -69,6 +73,10 @@ $viewsPath = getServerFilePath('views');
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "management/management_dom.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "management/management_permissions.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "management/management_transaction.js"); ?>"></script>
+    <?php
+    //add the uid options, as set in the ilios.php config file
+    include_once $viewsPath . 'management/set_uid_options.inc.php';
+    ?>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "management/management_user_accounts.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "management/permission_model.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "management/program_cohort_dom.js"); ?>"></script>
@@ -77,6 +85,7 @@ $viewsPath = getServerFilePath('views');
             ilios.management.user_accounts.passwordRequired = <?php echo ($password_required ? "true" : "false"); ?>;
             YAHOO.util.Event.onDOMReady(ilios.management.user_accounts.startUserAccountsWorkflow);
     </script>
+    <?php include_once $viewsPath . 'common/start_idle_page_timer.inc.php'; ?>
 </head>
 <body class="admin yui-skin-sam">
     <div id="wrapper">
@@ -200,8 +209,6 @@ $viewsPath = getServerFilePath('views');
             window.inform = ilios.alert.inform;
         });
 
-<?php include_once $viewsPath . 'common/start_idle_page_timer.inc.php'; ?>
-
         // load school cohorts
         YAHOO.util.Event.onDOMReady(function () {
             var o;
@@ -239,7 +246,7 @@ $viewsPath = getServerFilePath('views');
 
         // register the add/edit login credential dialogs with the pagewide event registry
         YAHOO.util.Event.onDOMReady(function(type, args, obj) {
-            IEvent.subscribe(function (type, args) {
+            ilios.ui.onIliosEvent.subscribe(function (type, args) {
                 if ('elc_dialog_open' === args[0].action) {
                     if (! ilios.management.user_accounts.editLoginCredentialsDialog) {
                         ilios.management.user_accounts.editLoginCredentialsDialog

@@ -55,7 +55,6 @@ ilios.home.preferences.assembleArchivingPermissionsDialog = function (type, args
 
     dialog.showDialogPane = function () {
         var displayHandler = me['display_handler'];
-
         if (displayHandler != null) {
             displayHandler(dialog);
         }
@@ -79,7 +78,7 @@ ilios.home.preferences.assembleArchivingPermissionsDialog = function (type, args
         }
     };
 
-    IEvent.subscribe(displayOnTriggerHandler);
+    ilios.ui.onIliosEvent.subscribe(displayOnTriggerHandler);
 
     ilios.home.preferences.apDialog = dialog;
 }
@@ -158,7 +157,7 @@ ilios.home.preferences.assembleRolloverPermissionsDialog = function (type, args,
         }
     };
 
-    IEvent.subscribe(displayOnTriggerHandler);
+    ilios.ui.onIliosEvent.subscribe(displayOnTriggerHandler);
 
     ilios.home.preferences.rpDialog = dialog;
 }
@@ -296,7 +295,7 @@ ilios.home.reminder.finishUserReminderDialogCancel = function (clickButton) {
             dialog.showDialogPane();
         }
     };
-    IEvent.subscribe(displayOnTriggerHandler);
+    ilios.ui.onIliosEvent.subscribe(displayOnTriggerHandler);
 
     ilios.home.reminder.userReminderDialog = dialog;
 
@@ -306,4 +305,4 @@ ilios.home.reminder.finishUserReminderDialogCancel = function (clickButton) {
     ilios.home.reminder.yuiCalendarInstance.hide();
     ilios.home.reminder.yuiCalendarInstance.selectEvent.subscribe(ilios.home.calendarSelectionHandler,
         ilios.home.reminder.yuiCalendarInstance, true);
-}
+};

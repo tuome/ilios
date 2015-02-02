@@ -94,9 +94,9 @@ ilios.igm.getDivFormattedMemberListForGroupModel = function (groupModel) {
     var rhett = '';
     var arr = [];
     var users = groupModel.getUsers();
-    
+
     for (var key in users) {
-        arr.push(users[key].getFormattedName(ilios.utilities.USER_NAME_FORMAT_LAST_FIRST));
+        arr.push(users[key].getFormattedName(ilios.utilities.UserNameFormatEnum.LAST_FIRST));
     }
     arr.sort(function(a, b) {
         return a.localeCompare(b);
@@ -348,6 +348,9 @@ ilios.igm.resetAddNewMembersDialog = function (dialog) {
 	element.value = '';
 
 	element = document.getElementById('em_uc_id');
+	element.value = '';
+
+	element = document.getElementById('em_other_id');
 	element.value = '';
 
 	element = document.getElementById('em_csv_file_field');

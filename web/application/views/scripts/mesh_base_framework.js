@@ -70,7 +70,7 @@ ilios.mesh.currentSearchTransactionASyncObject = null;
 ilios.mesh.performMeSHSearch = function (searchTerms, filterSelectedItems, storeQueryTerms) {
     var searchInfoElement = document.getElementById('mesh_search_status');
 
-    if (ilios.lang.trim(searchTerms).length < 3) {
+    if (YAHOO.lang.trim(searchTerms).length < 3) {
         searchInfoElement.innerHTML = ilios_i18nVendor.getI18NString('general.error.query_length');
     }
     else {
@@ -101,7 +101,7 @@ ilios.mesh.performMeSHSearch = function (searchTerms, filterSelectedItems, store
                     return;
                 }
                 resultsObject = parsedObject.results;
-                universeSearchCount = ilios.utilities.arraySize(resultsObject.search_results);
+                universeSearchCount = ilios.utilities.objectPropertyCount(resultsObject.search_results);
 
                 document.getElementById('mesh_search_status').innerHTML = i18nString + '&hellip;';
 

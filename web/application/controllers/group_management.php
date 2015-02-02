@@ -31,8 +31,6 @@ class Group_Management extends Ilios_Web_Controller
     public function index ()
     {
         $data = array();
-        $data['institution_name'] = $this->config->item('ilios_institution_name');
-        $data['user_id'] = $this->session->userdata('uid');
 
         // authorization check
         if (! $this->session->userdata('has_instructor_access')) {
@@ -42,8 +40,6 @@ class Group_Management extends Ilios_Web_Controller
 
         $this->output->set_header('Expires: 0');
 
-        $user = $this->user->getRowForPrimaryKeyId($data['user_id']);
-
         $schoolId = $this->session->userdata('school_id');
         $schoolRow = $this->school->getRowForPrimaryKeyId($schoolId);
 
@@ -51,7 +47,8 @@ class Group_Management extends Ilios_Web_Controller
             $data['school_id'] = $schoolId;
             $data['school_name'] = $schoolRow->title;
 
-            $data['viewbar_title'] = $data['institution_name'];
+            $data['viewbar_title'] = $this->config->item('ilios_institution_name');
+
             if ($schoolRow->title != null) {
                 $key = 'general.phrases.school_of';
                 $schoolOfStr = $this->languagemap->getI18NString($key);
@@ -75,43 +72,17 @@ class Group_Management extends Ilios_Web_Controller
             $key = 'groups.title_bar';
             $data['title_bar_string'] = $this->languagemap->getI18NString($key);
 
-            $key = 'groups.select_program';
-            $data['select_program_link_string'] = $this->languagemap->getI18NString($key);
-
             $key = 'groups.page_header';
             $data['page_header_string'] = $this->languagemap->getI18NString($key);
 
             $key = 'groups.instructor_picker_title';
             $data['instructor_picker_title'] = $this->languagemap->getI18NString($key);
 
-            $key = 'general.phrases.expand_all';
-            $data['expand_groups_string'] = $this->languagemap->getI18NString($key);
-
-            $key = 'groups.open_cohort';
-            $data['open_cohort_string'] = $this->languagemap->getI18NString($key);
-
             $key = 'groups.default_instructor';
             $data['default_instructor_string'] = $this->languagemap->getI18NString($key);
 
             $key = 'groups.default_location';
             $data['default_location_string'] = $this->languagemap->getI18NString($key);
-
-            $key = 'groups.add_new_to_all_group';
-            $data['add_to_all_string'] = $this->languagemap->getI18NString($key);
-
-            $key = 'groups.add_new_group';
-            $data['add_group_string'] = $this->languagemap->getI18NString($key);
-
-            $key = 'general.phrases.current_enrollment';
-            $data['current_enrollment_string'] = $this->languagemap->getI18NString($key);
-
-            $key = 'general.phrases.orphan_members';
-            $data['orphans_string'] = $this->languagemap->getI18NString($key);
-
-            $key = 'general.phrases.program_title_short';
-            $data['program_title_short_string'] = $this->languagemap->getI18NString($key);
-            $key = 'groups.program_title';
-            $data['program_title_full_string'] = $this->languagemap->getI18NString($key);
 
             $key = 'general.terms.filter';
             $data['word_filter_string'] = $this->languagemap->getI18NString($key);
@@ -124,7 +95,12 @@ class Group_Management extends Ilios_Web_Controller
 
 
     /**
-     * @todo add code docs
+     * Gets the users in a cohort
+     *
+     * Accepts the following GET parameters:
+     *     "cohort_id" ... the id for the cohort
+     *
+     * Prints out the users as a json formated string
      */
     public function getUsersForCohort ()
     {
@@ -136,7 +112,7 @@ class Group_Management extends Ilios_Web_Controller
             return;
         }
 
-        $cohortId = $this->input->get_post('cohort_id');
+        $cohortId = $this->input->get('cohort_id');
 
         $userArray = $this->user->getUsersForCohortAsArray($cohortId);
 
@@ -178,7 +154,7 @@ class Group_Management extends Ilios_Web_Controller
     }
 
     /**
-     * Expected params:
+     * Expected POST params:
      *      'num_groups'
      *      'cohort_id'
      *      'group_id'
@@ -198,9 +174,9 @@ class Group_Management extends Ilios_Web_Controller
 
         $userId = $this->session->userdata('uid');
 
-        $cohortId = (int) $this->input->get_post('cohort_id');
-        $groupToDivide = (int) $this->input->get_post('group_id');
-        $numberOfSubgroupsToCreate = (int) $this->input->get_post('num_groups');
+        $cohortId = (int) $this->input->post('cohort_id');
+        $groupToDivide = (int) $this->input->post('group_id');
+        $numberOfSubgroupsToCreate = (int) $this->input->post('num_groups');
 
         if (-1 == $groupToDivide) {
 
@@ -268,12 +244,12 @@ class Group_Management extends Ilios_Web_Controller
                         $this->group->commitTransaction();
 
                         // save audit trail
-                        $this->auditEvent->startTransaction();
-                        $success = $this->auditEvent->saveAuditEvent($auditAtoms, $userId);
-                        if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                            $this->auditEvent->rollbackTransaction();
+                        $this->auditAtom->startTransaction();
+                        $success = $this->auditAtom->saveAuditEvent($auditAtoms, $userId);
+                        if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                            $this->auditAtom->rollbackTransaction();
                         } else {
-                            $this->auditEvent->commitTransaction();
+                            $this->auditAtom->commitTransaction();
                         }
                     }
                 } while ($failedTransaction && ($transactionRetryCount > 0));
@@ -296,7 +272,7 @@ class Group_Management extends Ilios_Web_Controller
      *
      * Retrieves and prints out the groups trees for a given cohort.
      *
-     * Expected request parameters:
+     * Expected GET parameters:
      *     "cohort_id" ... the corort identifier
      *
      * Prints a JSON formatted array of group model arrays keyed off by "XHRDS".
@@ -320,7 +296,7 @@ class Group_Management extends Ilios_Web_Controller
             return;
         }
 
-        $cohortId = $this->input->get_post('cohort_id');
+        $cohortId = $this->input->get('cohort_id');
 
         $groupIds = $this->cohort->getGroupIdsForCohortWithId($cohortId);
         $groups = $this->_getGroupsForGroupIds($groupIds);
@@ -345,7 +321,7 @@ class Group_Management extends Ilios_Web_Controller
     /**
      * XHR Handler.
      * Deletes a given group and its sub-groups.
-     * Expected params:
+     * Expected POST params:
      *      'group_id'
      *      'container_number'
      *
@@ -363,8 +339,8 @@ class Group_Management extends Ilios_Web_Controller
 
         $userId = $this->session->userdata('uid');
 
-        $groupId = $this->input->get_post('group_id');
-        $containerNumber = $this->input->get_post('container_number');
+        $groupId = $this->input->post('group_id');
+        $containerNumber = $this->input->post('container_number');
 
         $failedTransaction = true;
         $transactionRetryCount = Ilios_Database_Constants::TRANSACTION_RETRY_COUNT;
@@ -385,12 +361,12 @@ class Group_Management extends Ilios_Web_Controller
                 $this->group->commitTransaction();
 
                 // save audit trail
-                $this->auditEvent->startTransaction();
-                $success = $this->auditEvent->saveAuditEvent($auditAtoms, $userId);
-                if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                    $this->auditEvent->rollbackTransaction();
+                $this->auditAtom->startTransaction();
+                $success = $this->auditAtom->saveAuditEvent($auditAtoms, $userId);
+                if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                    $this->auditAtom->rollbackTransaction();
                 } else {
-                    $this->auditEvent->commitTransaction();
+                    $this->auditAtom->commitTransaction();
                 }
             } else {
                 $msg = $this->languagemap->getI18NString('groups.error.failed_group_delete');
@@ -474,12 +450,12 @@ class Group_Management extends Ilios_Web_Controller
                 $this->group->commitTransaction();
 
                 // save audit trail
-                $this->auditEvent->startTransaction();
-                $success = $this->auditEvent->saveAuditEvent($auditAtoms, $userId);
-                if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                    $this->auditEvent->rollbackTransaction();
+                $this->auditAtom->startTransaction();
+                $success = $this->auditAtom->saveAuditEvent($auditAtoms, $userId);
+                if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                    $this->auditAtom->rollbackTransaction();
                 } else {
-                    $this->auditEvent->commitTransaction();
+                    $this->auditAtom->commitTransaction();
                 }
             } else {
                 Ilios_Database_TransactionHelper::failTransaction($transactionRetryCount, $failedTransaction, $this->group);
@@ -498,11 +474,10 @@ class Group_Management extends Ilios_Web_Controller
      *              Middle name
      *              Phone
      *              EMail address
-     *              UC id
-     *              GALEN id
+     *              Campus ID
      *              Other id
      *
-     * Expected parameters:
+     * Expected POST parameters:
      *          . 'cohort_id'
      *
      * @return a json'd array with either the keys 'error' & potentially 'duplicates',
@@ -537,13 +512,15 @@ class Group_Management extends Ilios_Web_Controller
                                 . $uploadData['file_type'];
         } else {
             $uploadData = $this->upload->data();
-            $cohortId = $this->input->get_post('cohort_id');
+            $cohortId = $this->input->post('cohort_id');
             $newUsers = array();
 
             //get the file contents in order to check that the file is UTF8-encoded...
             $uploadDataContents = file_get_contents($uploadData['full_path']);
-            //get the encoding-type
-            $encoding = mb_detect_encoding($uploadDataContents);
+            //get the encoding-type - explicitly enforce UTF-8 at the top of the detect-order as
+            //UTF-8 contents will return successfully as 'ASCII' if that is set as the priority
+            //by default for 'mbstring.detect_order' in any of PHP_INI_ALL
+            $encoding = mb_detect_encoding($uploadDataContents, 'UTF-8');
 
             //if the file is not UTF-8...
             if ($encoding != 'UTF-8') {
@@ -558,30 +535,84 @@ class Group_Management extends Ilios_Web_Controller
                 // false parameter => no named fields on line 0 of the csv
                 $csvData = $this->csvreader->parse_file($uploadData['full_path'], false);
 
-                $foundDuplicates = array();
+                $errorMessages = array();
 
-                foreach ($csvData as $row) {
-                    $email = $row[4];
+                $uidMinLength = $this->config->item('uid_min_length')?$this->config->item('uid_min_length'):9;
+                $uidMaxLength = $this->config->item('uid_max_length')?$this->config->item('uid_max_length'):9;
+                $emailAddresses = array();
+                foreach ($csvData as $i => $row) {
+                    $rowErrors = array();
+                    if(count($row) != 7){
+                        $rowErrors[] = $this->languagemap->getI18NString('group_management.validate.error.bad_csv_format');
+                    } else {
+                        $cleanArr = array(
+                            'lastName' => trim($row[0]),
+                            'firstName' => trim($row[1]),
+                            'middleName' => trim($row[2]),
+                            'phone' => trim($row[3]),
+                            'email' => trim($row[4]),
+                            'campusId' => trim($row[5]),
+                            'otherId' => trim($row[6])
+                        );
+                        if (empty($cleanArr['lastName'])) {
+                            $rowErrors[] = $this->languagemap->getI18NString('group_management.validate.error.lastName_missing');
+                        }
+                        if (empty($cleanArr['firstName'])) {
+                            $rowErrors[] = $this->languagemap->getI18NString('group_management.validate.error.firstName_missing');
+                        }
+                        if (empty($cleanArr['email'])) {
+                            $rowErrors[] = $this->languagemap->getI18NString('group_management.validate.error.email_missing');
+                        }
+                        if(!$email = filter_var($cleanArr['email'], FILTER_VALIDATE_EMAIL)){
+                            $rowErrors[] = $this->languagemap->getI18NString('group_management.validate.error.email_invalid');
+                        } else if ($this->user->userExistsWithEmail($email)) {
+                            $rowErrors[] = $this->languagemap->getI18NString('group_management.validate.error.duplicate_email');
+                        } else {
+                            if(!array_key_exists($email, $emailAddresses)){
+                                $emailAddresses[$email] = array();
+                            }
+                            $emailAddresses[$email][] = $i+1;
+                            $cleanArr['email'] = $email;
+                        }
 
-                    if ($this->user->userExistsWithEmail($email)) {
-                        array_push($foundDuplicates, ($email . ' ' . $row[0] . ', ' . $row[1] . ' ' . $row[2]));
+                        if (empty($cleanArr['campusId'])) {
+                            $rowErrors[] = $this->languagemap->getI18NString('group_management.validate.error.campusId_missing');
+                        } else {
+                            if (strlen($cleanArr['campusId']) < $uidMinLength) {
+                                $rowErrors[] = $this->languagemap->getI18NString('group_management.validate.error.campusId_too_short');
+                            }
+                            if (strlen($cleanArr['campusId']) > $uidMaxLength) {
+                                $rowErrors[] = $this->languagemap->getI18NString('group_management.validate.error.campusId_too_long');
+                            }
+                        }
+
+
+                    }
+                    if(!empty($rowErrors)){
+                        $errorMessages[$i+1] = $rowErrors;
+                    } else {
+                        $cleanData[] = $cleanArr;
+                    }
+                }
+                foreach($emailAddresses as $email => $rows){
+                    if(count($rows) > 1){
+                        foreach($rows as $rowId){
+                            $errorMessages[$rowId][] = $this->languagemap->getI18NString('group_management.validate.error.duplicate_email_in_file');
+                        }
                     }
                 }
 
                 // MAY RETURN THIS BLOCK
-                if (count($foundDuplicates) > 0) {
-                    $msg = $this->languagemap->getI18NString('general.error.duplicate_users_found');
+                if (count($errorMessages) > 0) {
 
-                    $rhett['duplicates'] = $foundDuplicates;
-                    $rhett['error'] = $msg;
-
+                    $rhett['rowErrors'] = $errorMessages;
+                    $rhett['error'] = $this->languagemap->getI18NString('groups.error.user_add_csv');
                     if (! unlink($uploadData['full_path'])) {
                         log_message('warning', 'Was unable to delete uploaded CSV file: ' . $uploadData['orig_name']);
                     }
 
                     header("Content-Type: text/plain");
                     echo json_encode($rhett);
-
                     return;
                 }
 
@@ -594,19 +625,18 @@ class Group_Management extends Ilios_Web_Controller
 
                     $this->user->startTransaction();
 
-                    foreach ($csvData as $row) {
-                        $lastName = trim($row[0]);
-                        $firstName = trim($row[1]);
-                        $middleName = trim($row[2]);
-                        $phone = trim($row[3]);
-                        $email = trim($row[4]);
-                        $ucUID = trim($row[5]);
-                        $otherId = trim($row[7]);
-
+                    foreach ($cleanData as $arr) {
+                        $lastName = $arr['lastName'];
+                        $firstName = $arr['firstName'];
+                        $middleName = $arr['middleName'];
+                        $phone = $arr['phone'];
+                        $email = $arr['email'];
+                        $campusId = $arr['campusId'];
+                        $otherId = $arr['otherId'];
                         $primarySchoolId = $this->session->userdata('school_id');
 
                         $newId = $this->user->addUserAsStudent($lastName, $firstName, $middleName, $phone,
-                            $email, $ucUID, $otherId, $cohortId, $primarySchoolId, $auditAtoms);
+                            $email, $campusId, $otherId, $cohortId, $primarySchoolId, $auditAtoms);
 
                         if (($newId <= 0) || $this->user->transactionAtomFailed()) {
                             $msg = $this->languagemap->getI18NString('general.error.db_insert');
@@ -627,12 +657,12 @@ class Group_Management extends Ilios_Web_Controller
                         $failedTransaction = false;
 
                         // save audit trail
-                        $this->auditEvent->startTransaction();
-                        $success = $this->auditEvent->saveAuditEvent($auditAtoms, $userId);
-                        if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                            $this->auditEvent->rollbackTransaction();
+                        $this->auditAtom->startTransaction();
+                        $success = $this->auditAtom->saveAuditEvent($auditAtoms, $userId);
+                        if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                            $this->auditAtom->rollbackTransaction();
                         } else {
-                            $this->auditEvent->commitTransaction();
+                            $this->auditAtom->commitTransaction();
                         }
 
                         $rhett['users'] = $newUsers;
@@ -651,6 +681,17 @@ class Group_Management extends Ilios_Web_Controller
     /**
      * Called via the Edit Members (or whatever) dialog for the db addition of a new user (given
      *  a cohort_id) -- an entry in the user table is made.
+
+     * Expected POST parameters:
+     *          . 'cohort_id'
+     *          . 'container_number'
+     *          . 'last_name'
+     *          . 'first_name'
+     *          . 'middle_name'
+     *          . 'phone'
+     *          . 'email'
+     *          . 'uc_uid'
+     *          . 'other_id'
      *
      * @return a json'd array with either the key 'error', or the key pair 'user' and
      *              'container_number' (the latter being a passback from the incoming param)
@@ -667,24 +708,50 @@ class Group_Management extends Ilios_Web_Controller
 
         $userId = $this->session->userdata('uid');
 
-        $cohortId = $this->input->get_post('cohort_id');
-        $containerNumber = $this->input->get_post('container_number');
-        $lastName = trim($this->input->get_post('last_name'));
-        $firstName = trim($this->input->get_post('first_name'));
-        $middleName = trim($this->input->get_post('middle_name'));
-        $phone = trim($this->input->get_post('phone'));
-        $email = trim($this->input->get_post('email'));
-        $ucUID = trim($this->input->get_post('uc_uid'));
+        $cohortId = $this->input->post('cohort_id');
+        $containerNumber = $this->input->post('container_number');
+        $lastName = trim($this->input->post('last_name'));
+        $firstName = trim($this->input->post('first_name'));
+        $middleName = trim($this->input->post('middle_name'));
+        $phone = trim($this->input->post('phone'));
+        $email = trim($this->input->post('email'));
+        $ucUID = trim($this->input->post('uc_uid'));
+        $otherId = trim($this->input->post('other_id'));
 
-        // MAY RETURN THIS BLOCK
+        if (empty($lastName)) {
+            $this->_printErrorXhrResponse('group_management.validate.error.lastName_missing');
+            return;
+        }
+        if (empty($firstName)) {
+            $this->_printErrorXhrResponse('group_management.validate.error.firstName_missing');
+            return;
+        }
+        if (empty($email)) {
+            $this->_printErrorXhrResponse('group_management.validate.error.email_missing');
+            return;
+        }
+        if(!$email = filter_var($email, FILTER_VALIDATE_EMAIL)){
+            $this->_printErrorXhrResponse('group_management.validate.error.email_invalid');
+            return;
+        }
+        if (empty($ucUID)) {
+            $this->_printErrorXhrResponse('group_management.validate.error.campusId_missing');
+            return;
+        }
+        $uidMinLength = $this->config->item('uid_min_length')?$this->config->item('uid_min_length'):9;
+        $uidMaxLength = $this->config->item('uid_max_length')?$this->config->item('uid_max_length'):9;
+
+        if (strlen($ucUID) < $uidMinLength) {
+            $this->_printErrorXhrResponse('group_management.validate.error.campusId_too_short');
+            return;
+        }
+        if (strlen($ucUID) > $uidMaxLength) {
+            $this->_printErrorXhrResponse('group_management.validate.error.campusId_too_long');
+            return;
+        }
+
         if ($this->user->userExistsWithEmail($email)) {
-            $msg = $this->languagemap->getI18NString('general.error.duplicate_user_found');
-
-            $rhett['error'] = $msg;
-
-            header("Content-Type: text/plain");
-            echo json_encode($rhett);
-
+            $this->_printErrorXhrResponse('general.error.duplicate_user_found');
             return;
         }
 
@@ -700,7 +767,7 @@ class Group_Management extends Ilios_Web_Controller
             $this->user->startTransaction();
 
             $newId = $this->user->addUserAsStudent($lastName, $firstName, $middleName, $phone, $email,
-                                                   $ucUID, '', $cohortId, $primarySchoolId,
+                                                   $ucUID, $otherId, $cohortId, $primarySchoolId,
                                                    $auditAtoms);
 
             if (($newId <= 0) || $this->user->transactionAtomFailed()) {
@@ -719,12 +786,12 @@ class Group_Management extends Ilios_Web_Controller
                 $this->user->commitTransaction();
 
                 // save audit trail
-                $this->auditEvent->startTransaction();
-                $success = $this->auditEvent->saveAuditEvent($auditAtoms, $userId);
-                if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                    $this->auditEvent->rollbackTransaction();
+                $this->auditAtom->startTransaction();
+                $success = $this->auditAtom->saveAuditEvent($auditAtoms, $userId);
+                if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                    $this->auditAtom->rollbackTransaction();
                 } else {
-                    $this->auditEvent->commitTransaction();
+                    $this->auditAtom->commitTransaction();
                 }
             }
         }
@@ -735,13 +802,16 @@ class Group_Management extends Ilios_Web_Controller
     }
 
     /*
-     * Expected parameters:
+     * Expected POST parameters:
      *  . 'group_id'
      *  . 'cohort_id'
      *  . 'next_container'
+     *  . 'crete_empty'
      *
      * If group_id == -1 then a new cohort-master-group will be made, and the group will be
      *  populated with all of the users in the cohort
+     *
+     * if create_empty is true then the group will be created with no members
      *
      * @return a json'd array with either the key 'error', or the keys group_id, title, and
      *              container_number (which is a passthrough of next_container)
@@ -756,9 +826,10 @@ class Group_Management extends Ilios_Web_Controller
 
         $userId = $this->session->userdata('uid');
 
-        $cohortId = $this->input->get_post('cohort_id');
-        $groupId = $this->input->get_post('group_id');
-        $containerNumber = $this->input->get_post('next_container');
+        $cohortId = $this->input->post('cohort_id');
+        $groupId = $this->input->post('group_id');
+        $containerNumber = $this->input->post('next_container');
+        $createEmpty = $this->input->post('create_empty') === 'true'?true:false;
 
         $failedTransaction = true;
         $transactionRetryCount = Ilios_Database_Constants::TRANSACTION_RETRY_COUNT;
@@ -767,7 +838,13 @@ class Group_Management extends Ilios_Web_Controller
 
             $this->group->startTransaction();
 
-            $rhett = $this->group->addNewGroup($cohortId, $groupId, $containerNumber, $auditAtoms);
+            $rhett = $this->group->addNewGroup(
+                $cohortId,
+                $groupId,
+                $containerNumber,
+                $auditAtoms,
+                $createEmpty
+            );
 
             if (isset($rhett['error']) || $this->group->transactionAtomFailed()) {
                 if (! isset($rhett['error'])) {
@@ -784,12 +861,12 @@ class Group_Management extends Ilios_Web_Controller
                 $this->group->commitTransaction();
 
                 // save audit trail
-                $this->auditEvent->startTransaction();
-                $success = $this->auditEvent->saveAuditEvent($auditAtoms, $userId);
-                if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                    $this->auditEvent->rollbackTransaction();
+                $this->auditAtom->startTransaction();
+                $success = $this->auditAtom->saveAuditEvent($auditAtoms, $userId);
+                if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                    $this->auditAtom->rollbackTransaction();
                 } else {
-                    $this->auditEvent->commitTransaction();
+                    $this->auditAtom->commitTransaction();
                 }
             }
         } while ($failedTransaction && ($transactionRetryCount > 0));

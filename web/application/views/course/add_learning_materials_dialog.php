@@ -7,6 +7,7 @@
  *      scripts/ilios_base.js
  *      scripts/ilios_dom.js
  *      scripts/ilios_utilities.js
+ *      scripts/ilios_alert.js
  */
 
 ?>
@@ -171,7 +172,7 @@
                 dialog.showDialogPane();
             }
         };
-        IEvent.subscribe(displayOnTriggerHandler);
+        ilios.ui.onIliosEvent.subscribe(displayOnTriggerHandler);
 
         ilios.cm.lm.learningMaterialDialog = dialog;
     }

@@ -12,7 +12,7 @@
     <div class="hd"><?php echo $instructor_picker_title; ?></div>
     <div class="bd">
         <div class="dialog_wrap">
-            <form method="GET" action="only needed because YUI crashes without a form element">
+            <form method="GET">
                 <div class="dialog_left">
                     <ul class="picked" id="instructor_picker_selected"></ul>
                 </div>
@@ -23,7 +23,7 @@
                         <div class="autolist" id="instructor_picker_autolist"></div>
                         <div id="instructor_picker_ac_progress" class="invisible"
                             style="position:absolute; left: 0; top: 326px;">
-                            <img src="<?php echo $viewsUrlRoot . 'images/loading.gif' ?>" border="0" />
+                            <img src="<?php echo $viewsUrlRoot . 'images/loading.gif' ?>" border="0" alt="Loading&hellip;" />
                         </div>
                     </div>
                 </div>
@@ -225,7 +225,7 @@
             if (resultDataObject instanceof UserModel) {
                 var rhett = '<span title="' + resultDataObject.getEmailAddress() + '">';
 
-                rhett += resultDataObject.getFormattedName(ilios.utilities.USER_NAME_FORMAT_LAST_FIRST);
+                rhett += resultDataObject.getFormattedName(ilios.utilities.UserNameFormatEnum.LAST_FIRST);
                 rhett += '</span>';
 
                 return rhett;

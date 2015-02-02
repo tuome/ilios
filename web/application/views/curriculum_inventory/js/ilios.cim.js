@@ -6,8 +6,9 @@
  *
  *  Dependencies:
  *     application/views/scripts/ilios_base.js
+ *     application/views/scripts/ilios_alert.js
  *     ilios_i18nVendor
- *     YUI Dom/Event/Element libs
+ *     YUI Event/Element libs
  *     YUI Container libs
  *     YUI Cookie lib
  *     application/views/curriculum_inventory/js/ilios.cim.model.js
@@ -20,8 +21,7 @@
     ilios.namespace('cim');
 
     var Lang = YAHOO.lang,
-        Event = YAHOO.util.Event,
-        Dom = YAHOO.util.Dom
+        Event = YAHOO.util.Event;
 
     /**
      * Creates a client-side application.
@@ -158,7 +158,7 @@
                     var continueStr = ilios_i18nVendor.getI18NString('curriculum_inventory.delete.confirm.warning')
                         + '<br /><br />' + ilios_i18nVendor.getI18NString('general.phrases.want_to_continue');
                     var yesStr = ilios_i18nVendor.getI18NString('general.terms.yes');
-                    var args = {};
+                    args = {};
                     args.model = this._reportModel;
                     args.dataSource = dataSource;
                     ilios.alert.inform(continueStr, yesStr, function (event, args) {
@@ -211,7 +211,7 @@
                 // wire up "add sequence block" button in the bottom toolbar
                 Event.addListener(this._sequenceBlockBottomToolbar.getAddButton(), 'click',
                     this.onSequenceBlockAddButtonClick, { report_id: this._reportModel.getId(), parent: null }, this);
-            };
+            }
 
             // show views and widgets
             this._reportView.show();
@@ -548,8 +548,8 @@
                 this._createSequenceBlockDialog.render();
                 // wire the dialog's success/failure events up to the application
                 this._createSequenceBlockDialog.sequenceBlockCreationSucceededEvent.subscribe(function (type, args, me) {
-                    var data = args[0]['data'];
-                    var map = args[0]['updated_siblings_order'];
+                    var data = args[0].data;
+                    var map = args[0].updated_siblings_order;
                     me._updateBlockOrderInSequence(map);
                     me.addSequenceBlock(data, false);
                     me.getStatusBar().show(
@@ -572,7 +572,7 @@
                 this._editSequenceBlockDialog.render();
                 // wire the dialog's success/failure events up to the application
                 this._editSequenceBlockDialog.sequenceBlockUpdateSucceededEvent.subscribe(function (type, args, me) {
-                    var data = args[0]['data'];
+                    var data = args[0].data;
                     me._updateBlockOrderInSequence(args[0].updated_children_order);
                     me._updateBlockOrderInSequence(args[0].updated_siblings_order);
                     me.updateSequenceBlock(data);
@@ -632,6 +632,8 @@
                 { report_id: model.get('reportId'), parent: model }, this);
                 Event.addListener(view.getEditButton(), 'click', this.onSequenceBlockEditButtonClick,
                     { block: model }, this);
+                Event.addListener(view.getDetailLink(), 'click', this.onSequenceBlockEditButtonClick,
+                    { block: model }, this);
             }
 
             if (oData.children) {
@@ -670,14 +672,14 @@
             var course, parent, view, parentView;
             var block = this.getSequenceBlockModelMap().get(oData.sequence_block_id);
             var levels = this.getAcademicLevels();
-            oData['academic_level_model'] = levels[oData.academic_level_id];
-            if (oData['course_id']) {
+            oData.academic_level_model = levels[oData.academic_level_id];
+            if (oData.course_id) {
                 course = block.get('course');
                 if (! course  || (course.getId() != oData.course_id)) {
-                    oData['course_model'] = this.getCourseRepository().checkOut(oData.course_id);
+                    oData.course_model = this.getCourseRepository().checkOut(oData.course_id);
                 }
             } else {
-                oData['course_model'] = null;
+                oData.course_model = null;
             }
 
             block.update(oData);
@@ -1228,183 +1230,153 @@
      * @param {Number} cnumber The container number. Used as suffix when creating unique ID attributes for HTML elements
      *      within the container and of the container itself.
      * @returns {HTMLElement} The generated markup.
-     * @static
+     * @private
      */
     var generateSequenceBlockMarkup = function (cnumber) {
         var rootEl, headerEl, bodyEl, rowEl, el, ulEl, liEl;
 
         // the container element
         rootEl = document.createElement('div');
-        Dom.setAttribute(rootEl, 'id', 'sequence-block-view-' + cnumber);
-        Dom.addClass(rootEl, 'entity_container');
-        Dom.addClass(rootEl, 'collapsed');
-        Dom.addClass(rootEl, 'hidden');
+        rootEl.setAttribute('id', 'sequence-block-view-' + cnumber);
+        rootEl.setAttribute('class', 'entity_container collapsed hidden');
+
         el = rootEl.appendChild(document.createElement('a'));
-        Dom.setAttribute(el, 'id', 'sequence-block-view-anchor-' + cnumber);
-        Dom.setAttribute(el, 'href', '#sequence-block-view-' + cnumber);
+        el.setAttribute('id', 'sequence-block-view-anchor-' + cnumber);
+        el.setAttribute('href', '#sequence-block-view-' + cnumber);
         // header
         headerEl = rootEl.appendChild(document.createElement('div'));
-        Dom.addClass(headerEl, 'hd');
-        Dom.setAttribute(headerEl, 'id', 'sequence-block-view-header-' + cnumber);
+        headerEl.setAttribute('class', 'hd');
+        headerEl.setAttribute('id', 'sequence-block-view-header-' + cnumber);
         el = headerEl.appendChild(document.createElement('div'));
-        Dom.addClass(el, 'toggle');
+        el.setAttribute('class', 'toggle');
         el = headerEl.appendChild(document.createElement('div'));
-        Dom.setAttribute(el, 'id', 'sequence-block-view-title-' + cnumber);
-        Dom.addClass(el, 'collapsed_summary_text_div');
+        el.setAttribute('id', 'sequence-block-view-title-' + cnumber);
+        el.setAttribute('class', 'collapsed_summary_text_div');
         el = headerEl.appendChild(document.createElement('div'));
-        Dom.setAttribute(el, 'id', 'sequence-block-view-delete-btn-' + cnumber);
-        Dom.addClass(el, 'delete_widget');
-        Dom.addClass(el, 'icon-cancel');
-        Dom.addClass(el, 'hidden');
+        el.setAttribute('id', 'sequence-block-view-delete-btn-' + cnumber);
+        el.setAttribute('class', 'delete_widget icon-cancel hidden');
         // body
         bodyEl = rootEl.appendChild(document.createElement('div'));
-        Dom.setAttribute(bodyEl, 'id', 'sequence-block-view-body-' + cnumber);
-        Dom.addClass(bodyEl, 'bd');
-        Dom.addClass(bodyEl, 'collapsible_container');
-        Dom.addClass(bodyEl, 'hidden');
+        bodyEl.setAttribute('id', 'sequence-block-view-body-' + cnumber);
+        bodyEl.setAttribute('class', 'bd collapsible_container hidden');
         // top-row with buttons
         rowEl = bodyEl.appendChild(document.createElement('div'));
-        Dom.setAttribute(rowEl, 'id', 'sequence-block-view-top-buttons-row-' + cnumber);
-        Dom.addClass(rowEl, 'hidden');
-        Dom.addClass(rowEl, 'row');
+        rowEl.setAttribute('id', 'sequence-block-view-top-buttons-row-' + cnumber);
+        rowEl.setAttribute('class', 'hidden row');
         ulEl = rowEl.appendChild(document.createElement('ul'));
-        Dom.addClass(ulEl, 'buttons');
-        Dom.addClass(ulEl, 'right');
+        ulEl.setAttribute('class', 'buttons right');
         liEl = ulEl.appendChild(document.createElement('li'));
         el = liEl.appendChild(document.createElement('button'));
         el.appendChild(document.createTextNode(ilios_i18nVendor.getI18NString('general.terms.add')));
-        Dom.setAttribute(el, 'id', 'sequence-block-view-add-btn-' + cnumber);
-        Dom.addClass(el, 'small');
-        Dom.addClass(el, 'radius');
-        Dom.addClass(el, 'button');
-        Dom.addClass(el, 'hidden');
+        el.setAttribute('id', 'sequence-block-view-add-btn-' + cnumber);
+        el.setAttribute('class', 'small radius button hidden');
         // description
         rowEl = bodyEl.appendChild(document.createElement('div'));
-        Dom.addClass(rowEl, 'row');
+        rowEl.setAttribute('class', 'row');
         el = rowEl.appendChild(document.createElement('div'));
-        Dom.addClass(el, 'label');
-        Dom.addClass(el, 'column');
+        el.setAttribute('class', 'label column');
         el.appendChild(document.createTextNode(ilios_i18nVendor.getI18NString('general.terms.description')));
         el = rowEl.appendChild(document.createElement('div'));
-        Dom.setAttribute(el, 'id', 'sequence-block-view-description-' + cnumber);
-        Dom.addClass(el, 'data');
-        Dom.addClass(el, 'column');
+        el.setAttribute('id', 'sequence-block-view-description-' + cnumber);
+        el.setAttribute('class', 'data column');
         // required
         rowEl = bodyEl.appendChild(document.createElement('div'));
-        Dom.addClass(rowEl, 'row');
+        rowEl.setAttribute('class', 'row');
         el = rowEl.appendChild(document.createElement('div'));
-        Dom.addClass(el, 'label');
-        Dom.addClass(el, 'column');
+        el.setAttribute('class', 'label column');
         el.appendChild(document.createTextNode(ilios_i18nVendor.getI18NString('general.terms.required') + ' ?'));
         el = rowEl.appendChild(document.createElement('div'));
-        Dom.setAttribute(el, 'id', 'sequence-block-view-required-' + cnumber);
-        Dom.addClass(el, 'data');
-        Dom.addClass(el, 'column');
+        el.setAttribute('id', 'sequence-block-view-required-' + cnumber);
+        el.setAttribute('class', 'data column');
         // academic level
         rowEl = bodyEl.appendChild(document.createElement('div'));
-        Dom.addClass(rowEl, 'row');
+        rowEl.setAttribute('class', 'row');
         el = rowEl.appendChild(document.createElement('div'));
-        Dom.addClass(el, 'label');
-        Dom.addClass(el, 'column');
+        el.setAttribute('class', 'label column');
         el.appendChild(document.createTextNode(ilios_i18nVendor.getI18NString('general.phrases.academic_level')));
         el = rowEl.appendChild(document.createElement('div'));
-        Dom.setAttribute(el, 'id', 'sequence-block-view-academic-level-' + cnumber);
-        Dom.addClass(el, 'data');
-        Dom.addClass(el, 'column');
+        el.setAttribute('id', 'sequence-block-view-academic-level-' + cnumber);
+        el.setAttribute('class', 'data column');
         // course
         rowEl = bodyEl.appendChild(document.createElement('div'));
-        Dom.addClass(rowEl, 'row');
+        rowEl.setAttribute('class', 'row');
         el = rowEl.appendChild(document.createElement('div'));
-        Dom.addClass(el, 'label');
-        Dom.addClass(el, 'column');
+        el.setAttribute('class', 'label column');
         el.appendChild(document.createTextNode(ilios_i18nVendor.getI18NString('general.terms.course')));
+        el.appendChild(document.createElement('br'));
+        var a = new YAHOO.util.Element(document.createElement('a'));
+        a.appendChild(document.createTextNode(ilios_i18nVendor.getI18NString('curriculum_inventory.summary.details_link')));
+        a.set('id', 'sequence-block-view-edit-link-' + cnumber);
+        a.set('href', '#');
+        el.appendChild(a.get('element'));
         el = rowEl.appendChild(document.createElement('div'));
-        Dom.setAttribute(el, 'id', 'sequence-block-view-course-' + cnumber);
-        Dom.addClass(el, 'data');
-        Dom.addClass(el, 'column');
+        el.setAttribute('id', 'sequence-block-view-course-' + cnumber);
+        el.setAttribute('class', 'data column');
         // child sequence order
         rowEl = bodyEl.appendChild(document.createElement('div'));
-        Dom.addClass(rowEl, 'row');
+        rowEl.setAttribute('class', 'row');
         el = rowEl.appendChild(document.createElement('div'));
-        Dom.addClass(el, 'label');
-        Dom.addClass(el, 'column');
+        el.setAttribute('class', 'label column');
         el.appendChild(document.createTextNode(ilios_i18nVendor.getI18NString('curriculum_inventory.sequence_block.child_sequence_order')));
         el = rowEl.appendChild(document.createElement('div'));
-        Dom.setAttribute(el, 'id', 'sequence-block-view-child-sequence-order-' + cnumber);
-        Dom.addClass(el, 'data');
-        Dom.addClass(el, 'column');
+        el.setAttribute('id', 'sequence-block-view-child-sequence-order-' + cnumber);
+        el.setAttribute('class', 'data column');
         // order in sequence
         rowEl = bodyEl.appendChild(document.createElement('div'));
-        Dom.addClass(rowEl, 'row');
+        rowEl.setAttribute('class', 'row');
         el = rowEl.appendChild(document.createElement('div'));
-        Dom.addClass(el, 'label');
-        Dom.addClass(el, 'column');
+        el.setAttribute('class', 'label column');
         el.appendChild(document.createTextNode(ilios_i18nVendor.getI18NString('curriculum_inventory.sequence_block.order_in_sequence')));
         el = rowEl.appendChild(document.createElement('div'));
-        Dom.setAttribute(el, 'id', 'sequence-block-view-order-in-sequence-' + cnumber);
-        Dom.addClass(el, 'data');
-        Dom.addClass(el, 'column');
+        el.setAttribute('id', 'sequence-block-view-order-in-sequence-' + cnumber);
+        el.setAttribute('class', 'data column');
         // start date
         rowEl = bodyEl.appendChild(document.createElement('div'));
-        Dom.addClass(rowEl, 'row');
+        rowEl.setAttribute('class', 'row');
         el = rowEl.appendChild(document.createElement('div'));
-        Dom.addClass(el, 'label');
-        Dom.addClass(el, 'column');
+        el.setAttribute('class', 'label column');
         el.appendChild(document.createTextNode(ilios_i18nVendor.getI18NString('general.phrases.start_date')));
         el = rowEl.appendChild(document.createElement('div'));
-        Dom.setAttribute(el, 'id', 'sequence-block-view-start-date-' + cnumber);
-        Dom.addClass(el, 'data');
-        Dom.addClass(el, 'column');
+        el.setAttribute('id', 'sequence-block-view-start-date-' + cnumber);
+        el.setAttribute('class', 'data column');
         // end date
         rowEl = bodyEl.appendChild(document.createElement('div'));
-        Dom.addClass(rowEl, 'row');
+        rowEl.setAttribute('class', 'row');
         el = rowEl.appendChild(document.createElement('div'));
-        Dom.addClass(el, 'label');
-        Dom.addClass(el, 'column');
+        el.setAttribute('class', 'label column');
         el.appendChild(document.createTextNode(ilios_i18nVendor.getI18NString('general.phrases.end_date')));
         el = rowEl.appendChild(document.createElement('div'));
-        Dom.setAttribute(el, 'id', 'sequence-block-view-end-date-' + cnumber);
-        Dom.addClass(el, 'data');
-        Dom.addClass(el, 'column');
+        el.setAttribute('id', 'sequence-block-view-end-date-' + cnumber);
+        el.setAttribute('class', 'data column');
         // duration
         rowEl = bodyEl.appendChild(document.createElement('div'));
-        Dom.addClass(rowEl, 'row');
+        rowEl.setAttribute('class', 'row');
         el = rowEl.appendChild(document.createElement('div'));
-        Dom.addClass(el, 'label');
-        Dom.addClass(el, 'column');
+        el.setAttribute('class', 'label column');
         el.appendChild(document.createTextNode(ilios_i18nVendor.getI18NString('general.terms.duration')));
         el = rowEl.appendChild(document.createElement('div'));
-        Dom.setAttribute(el, 'id', 'sequence-block-view-duration-' + cnumber);
-        Dom.addClass(el, 'data');
-        Dom.addClass(el, 'column');
+        el.setAttribute('id', 'sequence-block-view-duration-' + cnumber);
+        el.setAttribute('class', 'data column');
         // is track?
         rowEl = bodyEl.appendChild(document.createElement('div'));
-        Dom.addClass(rowEl, 'row');
+        rowEl.setAttribute('class', 'row');
         el = rowEl.appendChild(document.createElement('div'));
-        Dom.addClass(el, 'label');
-        Dom.addClass(el, 'column');
+        el.setAttribute('class', 'label column');
         el.appendChild(document.createTextNode(ilios_i18nVendor.getI18NString('general.phrases.is_track') + " ?"));
         el = rowEl.appendChild(document.createElement('div'));
-        Dom.setAttribute(el, 'id', 'sequence-block-view-track-' + cnumber);
-        Dom.addClass(el, 'data');
-        Dom.addClass(el, 'column');
+        el.setAttribute('id', 'sequence-block-view-track-' + cnumber);
+        el.setAttribute('class', 'data column');
         rowEl = bodyEl.appendChild(document.createElement('div'));
-        Dom.addClass(rowEl, 'row');
-        Dom.addClass(rowEl, 'sequence-block-children');
-        Dom.setAttribute(rowEl, 'id', 'sequence-block-view-children-' + cnumber);
+        rowEl.setAttribute('class', 'row sequence-block-children');
+        rowEl.setAttribute('id', 'sequence-block-view-children-' + cnumber);
         // bottom-row with buttons
         rowEl = bodyEl.appendChild(document.createElement('div'));
-        Dom.setAttribute(rowEl, 'id', 'sequence-block-view-bottom-buttons-row-' + cnumber);
-        Dom.addClass(rowEl, 'buttons');
-        Dom.addClass(rowEl, 'bottom');
-        Dom.addClass(rowEl, 'hidden');
+        rowEl.setAttribute('id', 'sequence-block-view-bottom-buttons-row-' + cnumber);
+        rowEl.setAttribute('class', 'buttons bottom hidden');
         el = rowEl.appendChild(document.createElement('button'));
         el.appendChild(document.createTextNode(ilios_i18nVendor.getI18NString('general.terms.edit')));
-        Dom.setAttribute(el, 'id', 'sequence-block-view-edit-btn-' + cnumber);
-        Dom.addClass(el, 'medium');
-        Dom.addClass(el, 'radius');
-        Dom.addClass(el, 'button');
-        Dom.addClass(el, 'hidden');
+        el.setAttribute('id', 'sequence-block-view-edit-btn-' + cnumber);
+        el.setAttribute('class', 'medium radius button hidden');
         return rootEl;
     };
 

@@ -115,6 +115,11 @@ LearningMaterialModel.prototype.removeMeSHItem = function (meshItem) {
     }
 };
 
+//after decoupling the LM's from course and session, we need to set the model dirty without notifying
+LearningMaterialModel.prototype.setDirty = function () {
+    this.isDirty = true;
+};
+
 LearningMaterialModel.prototype.containsMeSHItem = function (meshItem) {
     for (var key in this.meshTerms) {
         if (meshItem.compareTo(this.meshTerms[key]) == 0) {
@@ -140,7 +145,9 @@ LearningMaterialModel.prototype.setRequired = function (flag) {
     if (this.required != flag) {
         this.required = flag;
 
-        this.setDirtyAndNotify();
+        //because we're decoupling, set dirty but don't notify
+        this.setDirty();
+
     }
 };
 
@@ -346,8 +353,8 @@ LearningMaterialModel.prototype.compareTo = function (otherModel) {
         return 1;           // arbitrary but consistent
     }
 
-    if (ilios.utilities.arraySize(this.meshTerms)
-                                            != ilios.utilities.arraySize(otherModel.meshTerms)) {
+    if (ilios.utilities.objectPropertyCount(this.meshTerms)
+                                            != ilios.utilities.objectPropertyCount(otherModel.meshTerms)) {
         return 1;           // arbitrary but consistent
     }
 
@@ -391,6 +398,6 @@ LearningMaterialModel.prototype.replaceContentWithModel = function (newModel, fo
 
         this.meshTerms = newModel.meshTerms.concat();
 
-        this.setDirtyAndNotify();
+        this.setDirty();
     }
 };

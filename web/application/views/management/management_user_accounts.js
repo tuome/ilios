@@ -34,6 +34,9 @@ ilios.management.user_accounts.startUserAccountsWorkflow = function () {
     }
 };
 
+//get the uid options set in the config file
+ilios.management.user_accounts.uidOptions = ilios.global.readJsonFromDom('uidOptions');
+
 /**
  * @see from ilios.ui.handleProgramCohortSelectionDialogDisplay()
  *
@@ -337,7 +340,7 @@ ilios.management.user_accounts.createRowForSearchResultUser = function (user) {
 
     element.setAttribute('style', 'float: left;');
     subElement.setAttribute('style', 'font-weight: bold; float: left;');
-    subElement.innerHTML = userModel.getFormattedName(ilios.utilities.USER_NAME_FORMAT_LAST_FIRST);
+    subElement.innerHTML = userModel.getFormattedName(ilios.utilities.UserNameFormatEnum.LAST_FIRST);
     element.appendChild(subElement);
 
 
@@ -1162,6 +1165,13 @@ ilios.management.user_accounts.buildUserAddAndRolesDOM = function (userModel) {
         element = ilios.management.user_accounts.generateUserRoleDiv(i18nStr,
             'ua_account_sync_ignore_checkbox', false, syncIgnored);
         subContainer.appendChild(element);
+
+        i18nStr = ilios_i18nVendor.getI18NString('management.user_accounts.roles.former_student');
+        element = ilios.management.user_accounts.generateUserRoleDiv(i18nStr,
+                                                                     'ua_former_student_role_checkbox',
+                                                                     userIsDisabled,
+                                                                     false);
+        subContainer.appendChild(element);
     }
 
     contentContainer.appendChild(subContainer);
@@ -1207,7 +1217,7 @@ ilios.management.user_accounts.buildUserAddAndRolesDOM = function (userModel) {
     } else {
 
         element = document.createElement('div');
-        element.innerHTML = userModel.getFormattedName(ilios.utilities.USER_NAME_FORMAT_FIRST_FIRST);
+        element.innerHTML = userModel.getFormattedName(ilios.utilities.UserNameFormatEnum.FIRST_FIRST);
         element.setAttribute('class', 'read_only_data');
         subContainer.appendChild(element);
 
@@ -1371,6 +1381,9 @@ ilios.management.user_accounts.buildUserAddAndRolesDOM = function (userModel) {
                 case 3:
                     element = document.getElementById('ua_faculty_role_checkbox');
                     break;
+                case 9:
+                    element = document.getElementById('ua_former_student_role_checkbox');
+                    break;
             }
 
             if (element != null) {
@@ -1424,6 +1437,11 @@ ilios.management.user_accounts.commitUserChanges = function (userModel, passback
         }
         if (document.getElementById('ua_faculty_role_checkbox').checked) {
             roleArray.push(3);
+        }
+        if (! addingUser) {
+            if (document.getElementById('ua_former_student_role_checkbox').checked) {
+                roleArray.push(9);
+            }
         }
     }
 
@@ -1551,7 +1569,7 @@ ilios.management.user_accounts.generateUserCohortsContainerMarkup = function (pa
     btnEl.innerHTML = ilios_i18nVendor.getI18NString('general.terms.edit');
 
     Event.addListener(btnEl, 'click', function (e) {
-        IEvent.fire({
+        ilios.ui.onIliosEvent.fire({
             action: 'gen_dialog_open',
             event: 'find_cohort_and_program'
         });
@@ -1592,7 +1610,7 @@ ilios.management.generateLoginCredentialsContainerMarkup = function (parentEl, u
         btnEl.setAttribute('style', 'display: none');
         btnEl.innerHTML = ilios_i18nVendor.getI18NString('management.user_accounts.edit_login_credentials_button');
         Event.addListener(btnEl, 'click', function (e) {
-            IEvent.fire({
+            ilios.ui.onIliosEvent.fire({
                 action: 'elc_dialog_open',
                 model: userModel
             });
@@ -1605,7 +1623,7 @@ ilios.management.generateLoginCredentialsContainerMarkup = function (parentEl, u
         btnEl.setAttribute('style', 'display: none');
         btnEl.innerHTML = ilios_i18nVendor.getI18NString('management.user_accounts.add_login_credentials_button');
         Event.addListener(btnEl, 'click', function (e) {
-            IEvent.fire({
+            ilios.ui.onIliosEvent.fire({
                 action: 'alc_dialog_open',
                 model: userModel
             });
@@ -1723,26 +1741,36 @@ ilios.management.user_accounts.checkUserData = function () {
     var passwordStrength;
     var msg;
 
+    //set the uc_id length to a single value or a range depending on its settings in the config file
+    var uc_id_length;
+    if(ilios.management.user_accounts.uidOptions.uid_min_length === ilios.management.user_accounts.uidOptions.uid_max_length){
+        uc_id_length = ilios.management.user_accounts.uidOptions.uid_max_length;
+    } else {
+	uc_id_length = ilios.management.user_accounts.uidOptions.uid_min_length + "-" + ilios.management.user_accounts.uidOptions.uid_max_length;
+    }
+
+
     element = document.getElementById('ua_first_name_tf');
-    if ((element != null) && (ilios.lang.trim(element.value).length == 0)) {
+    if ((element != null) && (YAHOO.lang.trim(element.value).length == 0)) {
         divsToStyle.push('ua_first_name_tf');
         divsToHint.push(ilios_i18nVendor.getI18NString('management.error.data.first_name'));
     }
 
     element = document.getElementById('ua_last_name_tf');
-    if ((element != null) && (ilios.lang.trim(element.value).length == 0)) {
+    if ((element != null) && (YAHOO.lang.trim(element.value).length == 0)) {
         divsToStyle.push('ua_last_name_tf');
         divsToHint.push(ilios_i18nVendor.getI18NString('management.error.data.last_name'));
     }
 
     element = document.getElementById('ua_uc_id_tf');
-    if ((element != null) && (ilios.lang.trim(element.value).length != 9)) {
-        divsToStyle.push('ua_uc_id_tf');
-        divsToHint.push(ilios_i18nVendor.getI18NString('management.error.data.uc_id'));
+    if ((element != null) && ((YAHOO.lang.trim(element.value).length < ilios.management.user_accounts.uidOptions.uid_min_length)
+        || (YAHOO.lang.trim(element.value).length > ilios.management.user_accounts.uidOptions.uid_max_length))) {
+	divsToStyle.push('ua_uc_id_tf');
+        divsToHint.push(ilios_i18nVendor.getI18NString('management.error.data.uc_id') + " " +  uc_id_length + " " + ilios_i18nVendor.getI18NString('management.error.data.uc_id_chars_in_length'));
     }
 
     element = document.getElementById('ua_email_tf');
-    if ((element != null) && (ilios.lang.trim(element.value).length == 0)) {
+    if ((element != null) && (YAHOO.lang.trim(element.value).length == 0)) {
         divsToStyle.push('ua_email_tf');
         divsToHint.push(ilios_i18nVendor.getI18NString('management.error.data.email'));
     }
@@ -1756,7 +1784,7 @@ ilios.management.user_accounts.checkUserData = function () {
 
     if (ilios.management.user_accounts.manageLoginCredentials) {
         element = document.getElementById('ua_login_username_tf');
-        if ((element != null) && (ilios.lang.trim(element.value).length == 0)) {
+        if ((element != null) && (YAHOO.lang.trim(element.value).length == 0)) {
             divsToStyle.push('ua_login_username_tf');
             divsToHint.push(ilios_i18nVendor.getI18NString('management.error.data.login_username'));
         }
@@ -1892,7 +1920,7 @@ ilios.management.user_accounts.displayTheAreYouSuperSuperSureYouWantToDisableVie
                 .generateReadOnlyUserAttributePair(i18nStr,
                                                    userModel.getFormattedName(
                                                                     ilios.utilities
-                                                                        .USER_NAME_FORMAT_FIRST_FIRST));
+                                                                        .UserNameFormatEnum.FIRST_FIRST));
     element.appendChild(subElement);
     i18nStr = ilios_i18nVendor.getI18NString('general.user.uc_id');
     subElement

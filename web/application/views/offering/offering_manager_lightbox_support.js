@@ -45,7 +45,7 @@ ilios.om.lightbox.displayCalendarLightbox = function (id) {
             tmpModel = tmpArray[key];
 
             if (tmpModel instanceof UserModel) {
-                displayString = tmpModel.getFormattedName(ilios.utilities.USER_NAME_FORMAT_LAST_FIRST);
+                displayString = tmpModel.getFormattedName(ilios.utilities.UserNameFormatEnum.LAST_FIRST);
             }
             else {
                 displayString = tmpModel.title;
@@ -272,7 +272,7 @@ ilios.om.lightbox.registerLightboxUIListeners = function () {
         if (resultDataObject instanceof UserModel) {
             var rhett = '<span title="' + resultDataObject.getEmailAddress() + '">';
 
-            rhett += resultDataObject.getFormattedName(ilios.utilities.USER_NAME_FORMAT_LAST_FIRST);
+            rhett += resultDataObject.getFormattedName(ilios.utilities.UserNameFormatEnum.LAST_FIRST);
             rhett += '</span>';
 
             return rhett;
@@ -422,8 +422,8 @@ ilios.om.lightbox.calendarSelectionHandler = function (type, args, obj) {
 ilios.om.lightbox.setTimeValue = function (selector, isStartTime) {
     var selectedValue = selector.options[selector.selectedIndex].value;
     var timeChunks = selectedValue.split(':');
-    var hours = ilios.utilities.parseIntIgnoringLeadingZeros(timeChunks[0]);
-    var minutes = ilios.utilities.parseIntIgnoringLeadingZeros(timeChunks[1]);
+    var hours = parseInt(timeChunks[0], 10);
+    var minutes = parseInt(timeChunks[1], 10);
     var startDate = new Date(ilios.om.lightbox.inEditOfferingModel.getStartDate().getTime());
     var endDate = new Date(ilios.om.lightbox.inEditOfferingModel.getEndDate().getTime());
     var changedEndDateToo = false;
@@ -614,7 +614,7 @@ ilios.om.lightbox.handleInstructorGroupSelection = function (selectedModel) {
     var displayString = null;
 
     if (selectedModel instanceof UserModel) {
-        displayString = selectedModel.getFormattedName(ilios.utilities.USER_NAME_FORMAT_LAST_FIRST);
+        displayString = selectedModel.getFormattedName(ilios.utilities.UserNameFormatEnum.LAST_FIRST);
     } else {
         displayString = selectedModel.title;
     }

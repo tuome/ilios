@@ -182,9 +182,9 @@ UserModel.prototype.getUniqueKey = function () {
 
 /*
  * @param userNameFormatType one of the following ~constants:
- *          ilios.utilities.USER_NAME_FORMAT_LAST_FIRST
- *          ilios.utilities.USER_NAME_FORMAT_FIRST_FIRST
- *          ilios.utilities.USER_NAME_FORMAT_FIRST_INITIAL_FIRST
+ *          ilios.utilities.UserNameFormatEnum.LAST_FIRST
+ *          ilios.utilities.UserNameFormatEnum.FIRST_FIRST
+ *          ilios.utilities.UserNameFormatEnum.FIRST_INITIAL_FIRST
  */
 UserModel.prototype.getFormattedName = function (userNameFormatType) {
     return ilios.utilities.createFormattedUserName(this.firstName, this.middleName, this.lastName,
@@ -220,7 +220,6 @@ UserModel.prototype.clone = function () {
  *      first name
  *      middle name
  *      uc uid
- *      galen id
  *      other id
  *      email address
  *      phone number

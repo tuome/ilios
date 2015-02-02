@@ -16,7 +16,7 @@ $viewsPath = getServerFilePath('views');
     <meta name="description" content="">
 
     <!-- Mobile viewport optimized: h5bp.com/viewport -->
-    <meta name="viewport" content="width=device-width">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- Place favicon.ico and apple-touch-icon.png in the root directory: mathiasbynens.be/notes/touch-icons -->
     <link rel="stylesheet" href="<?php echo appendRevision($viewsUrlRoot . "css/ilios-styles.css"); ?>" media="all">
@@ -25,6 +25,8 @@ $viewsPath = getServerFilePath('views');
     <style type="text/css"></style>
 
     <!-- More ideas for your <head> here: h5bp.com/d/head-Tips -->
+
+    <?php include_once $viewsPath . 'common/google_analytics.inc.php'; ?>
 
     <!--[if lt IE 9]>
     <script src="<?php echo $viewsUrlRoot; ?>scripts/third_party/html5shiv.js"></script>
@@ -38,11 +40,13 @@ $viewsPath = getServerFilePath('views');
     <!-- Ilios JS -->
     <script type="text/javascript" src="<?php echo $controllerURL; ?>/getI18NJavascriptVendor"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_base.js"); ?>"></script>
-    <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/models/preferences_model.js"); ?>"></script>
+    <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_alert.js"); ?>"></script>
+    <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_preferences.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_utilities.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_ui.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_ui_rte.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_dom.js"); ?>"></script>
+    <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_timer.js"); ?>"></script>
     <script type="text/javascript">
         // expose this to our program_manager_*.js
         var controllerURL = "<?php echo $controllerURL; ?>/";
@@ -73,6 +77,8 @@ $viewsPath = getServerFilePath('views');
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/competency_base_framework.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "program/competency_dialog_support.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "program/steward_dialog_support.js"); ?>"></script>
+    <?php include_once $viewsPath . 'common/set_user_preferences.inc.php'; ?>
+    <?php include_once $viewsPath . 'common/start_idle_page_timer.inc.php'; ?>
 </head>
 
 <body class="program yui-skin-sam">
@@ -112,12 +118,12 @@ $viewsPath = getServerFilePath('views');
                 <form method="post" action="<?php echo current_url(); ?>/addNewProgram">
                     <input id="new_program_hidden" name="new_program_hidden" type="hidden" />
                     <div style="position: relative; margin-bottom: 18px;">
-                        <span class="entity_widget_title"><?php echo $program_title_full_string; ?></span>
+                        <span class="entity_widget_title"><?php echo t('general.phrases.program_title_full'); ?></span>
                         <br/>
                         <input id="new_program_title" name="new_program_title" type="text"  value="" size="50"/>
                     </div>
                     <div style="position: relative; margin-bottom: 6px;">
-                        <span class="entity_widget_title"><?php echo $program_title_short_string; ?></span>
+                        <span class="entity_widget_title"><?php echo t('general.phrases.program_title_short'); ?></span>
                         <br />
                         <input id="new_short_title" name="new_short_title" type="text" value="" size="20"
                             style="margin-bottom: 9px;" />
@@ -142,18 +148,19 @@ $viewsPath = getServerFilePath('views');
             </div>
         </div>
     </div> <!-- end #program_add_dialog -->
+    <div class="tabdialog" id="discipline_picker_dialog"></div>
 <?php
     include $viewsPath . 'common/mesh_picker_include.php';
     include 'program_search_include.php';
     include 'archiving_dialog.php';
     include 'competency_include.php';
     include 'edit_objective_text_dialog.php';
-    include 'discipline_include.php';
     include 'director_include.php';
     include 'steward_include.php';
 ?>
 <!-- end dialog tabs -->
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "program/add_program_dialog_include.js"); ?>"></script>
+
     <script type="text/javascript">
         // register alert/inform overrides on window load
         YAHOO.util.Event.on(window, 'load', function() {
@@ -161,15 +168,18 @@ $viewsPath = getServerFilePath('views');
             window.inform = ilios.alert.inform;
         });
 <?php
-    generateJavascriptRepresentationCodeOfPHPArray($preference_array, 'dbObjectRepresentation', false);
-?>
-        ilios.global.installPreferencesModel();
-        ilios.global.preferencesModel.updateWithServerDispatchedObject(dbObjectRepresentation);
-
-<?php
     include_once $viewsPath . 'common/load_school_competencies.inc.php';
-    include_once $viewsPath . 'common/start_idle_page_timer.inc.php';
 ?>
+        YAHOO.util.Event.onDOMReady(ilios.pm.disableAddProgramYearLink, {});
+
+        YAHOO.util.Event.onDOMReady(ilios.pm.disc_initDialog, {
+            // unique event that triggers opening of the dialog fired
+            // from search link near course mesh form element
+            trigger: "discipline_picker_show_dialog",
+            // unique id of the div where the dialog xhtml can be
+            // generated (once)
+            container: "discipline_picker_dialog"
+        });
 
         YAHOO.util.Event.onDOMReady(ilios.dom.buildDialogPanel, {
             trigger: 'add_new_program',

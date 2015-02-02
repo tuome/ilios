@@ -35,12 +35,17 @@ ilios.home.resetUserReminderDialog = function (dialog) {
 
 ilios.home.populateArchivingPermissionsDialog = function () {
     var Element = YAHOO.util.Element;
-    var preferencesModel = ilios.global.preferencesModel;
+    var preferencesModel;
     var deselectIdString = null;
     var selectIdStringBase = null;
     var element = null;
 
-    if (preferencesModel.showProgramYearArchiving()) {
+    if (! ilios.preferences.preferencesModel) {
+        ilios.preferences.installPreferencesModel();
+    }
+    preferencesModel = ilios.preferences.preferencesModel;
+
+    if (preferencesModel.programYearArchiving) {
         deselectIdString = "ap_py_radio_inactive_label";
         selectIdStringBase = "ap_py_radio_active";
     } else {
@@ -57,7 +62,7 @@ ilios.home.populateArchivingPermissionsDialog = function () {
     element.setAttribute('checked', 'true');
 
 
-    if (preferencesModel.showCourseArchiving()) {
+    if (preferencesModel.courseArchiving) {
         deselectIdString = "ap_course_radio_inactive_label";
         selectIdStringBase = "ap_course_radio_active";
     } else {
@@ -76,12 +81,17 @@ ilios.home.populateArchivingPermissionsDialog = function () {
 
 ilios.home.populateRolloverPermissionsDialog = function () {
     var Element = YAHOO.util.Element;
-    var preferencesModel = ilios.global.preferencesModel;
+    var preferencesModel;
     var deselectIdString = null;
     var selectIdStringBase = null;
     var element = null;
 
-    if (preferencesModel.showCourseRollover()) {
+    if (! ilios.preferences.preferencesModel) {
+        ilios.preferences.installPreferencesModel();
+    }
+    preferencesModel = ilios.preferences.preferencesModel;
+
+    if (preferencesModel.courseRollover) {
         deselectIdString = "rp_radio_inactive_label";
         selectIdStringBase = "rp_radio_active";
     } else {

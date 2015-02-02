@@ -99,8 +99,8 @@ class User extends Ilios_Base_Model
         $newId = $this->db->insert_id();
 
         if (is_array($auditAtoms)) {
-            $auditAtoms[] = $this->auditEvent->wrapAtom($newId, 'user_id', $this->databaseTableName,
-                Ilios_Model_AuditUtils::CREATE_EVENT_TYPE, 1);
+            $auditAtoms[] = Ilios_Model_AuditUtils::wrapAuditAtom($newId, 'user_id', $this->databaseTableName,
+                Ilios_Model_AuditUtils::CREATE_EVENT_TYPE);
         }
 
         //  assign primary role, if applicable
@@ -111,7 +111,7 @@ class User extends Ilios_Base_Model
             $this->db->insert('user_x_user_role', $newRow);
 
             if (is_array($auditAtoms)) {
-                $auditAtoms[] = $this->auditEvent->wrapAtom($newId, 'user_id', 'user_x_user_role',
+                $auditAtoms[] = Ilios_Model_AuditUtils::wrapAuditAtom($newId, 'user_id', 'user_x_user_role',
                    Ilios_Model_AuditUtils::CREATE_EVENT_TYPE);
             }
         }
@@ -215,11 +215,20 @@ EOL;
      * @param string $middleInitial
      * @param string $lastName
      * @param boolean $isStudent
+     * @param boolean $isFormerStudent
      * @param string $phone
      * @param boolean $affectUserRoles if set to TRUE then the user's role associations are updated as well.
      */
-    public function updateUser ($userId, $firstName, $middleInitial, $lastName, $isStudent, $phone, $affectUserRoles = true)
-    {
+    public function updateUser(
+        $userId,
+        $firstName,
+        $middleInitial,
+        $lastName,
+        $isStudent,
+        $isFormerStudent,
+        $phone,
+        $affectUserRoles = true
+    ) {
         $updateRow = array();
 
         $updateRow['first_name'] = $firstName;
@@ -231,7 +240,13 @@ EOL;
         $this->db->update($this->databaseTableName, $updateRow);
 
         if ($affectUserRoles) {
-            $this->affectRoleForUser($userId, ($isStudent ? User_Role::STUDENT_ROLE_ID : User_Role::FACULTY_ROLE_ID), true);
+            if ($isStudent) {
+                $this->affectRoleForUser($userId, User_Role::STUDENT_ROLE_ID, true);
+            } else if ($isFormerStudent) {
+                $this->affectRoleForUser($userId, User_Role::FORMER_STUDENT_ROLE_ID, true);
+            } else {
+                $this->affectRoleForUser($userId, User_Role::FACULTY_ROLE_ID, true);
+            }
         }
     }
 
@@ -331,6 +346,26 @@ EOL;
         $rhett = array();
 
         $this->db->where('email', $emailAddress);
+        $this->db->where('enabled', 1);
+
+        $queryResults = $this->db->get($this->databaseTableName);
+        foreach ($queryResults->result_array() as $row) {
+            array_push($rhett, $row);
+        }
+
+        return $rhett;
+    }
+
+    /**
+     * Retrieves enabled ("active") user-accounts that match a given institution ID
+     * @param string $institutionId
+     * @return array
+     */
+    public function getEnabledUsersWithInstitutionId ($institutionId)
+    {
+        $rhett = array();
+
+        $this->db->where('uc_uid', $institutionId);
         $this->db->where('enabled', 1);
 
         $queryResults = $this->db->get($this->databaseTableName);
@@ -748,6 +783,16 @@ EOL;
     public function userIsCourseDirector ($userId)
     {
         return $this->userHasRole($userId, User_Role::COURSE_DIRECTOR_ROLE_ID);
+    }
+
+    /**
+     * Checks if a given user has the 'former student' role assigned.
+     * @param int $userId
+     * @return boolean TRUE if the user has the 'former student' role, otherwise FALSE
+     */
+    public function userIsFormerStudent ($userId)
+    {
+        return $this->userHasRole($userId, User_Role::FORMER_STUDENT_ROLE_ID);
     }
 
     /**
@@ -1223,9 +1268,9 @@ EOL;
      * @param int $id the user id
      * @return array|boolean the user record as associative array, or FALSE if none could be found.
      */
-    public function getEnabledUsersById ($id)
+    public function getEnabledUserById ($id)
     {
-        $rhett = array();
+        $rhett = false;
 
         $this->db->where('user_id', $id);
         $this->db->where('enabled', 1);
@@ -1237,6 +1282,35 @@ EOL;
         $query->free_result();
         return $rhett;
     }
+
+    /**
+     * Retrieves the enabled ("active") user-account by a given API token.
+     *
+     * @param string $key The API token.
+     * @return array|boolean the user record as associative array, or FALSE if none could be found.
+     */
+    public function getEnabledUserByToken ($key)
+    {
+        $rhett = false;
+        $clean = array();
+        $clean['key'] = $this->db->escape($key);
+
+        $sql =<<< EOL
+SELECT u.*
+FROM user u
+JOIN api_key ak ON ak.user_id = u.user_id
+WHERE u.enabled = 1
+AND ak.api_key = {$clean['key']}
+EOL;
+
+        $query = $this->db->query($sql);
+        if (0 < $query->num_rows()) {
+            $rhett = $query->first_row('array');
+        }
+        $query->free_result();
+        return $rhett;
+    }
+
 
     /**
      * Retrieves the roles assigned to a given user.

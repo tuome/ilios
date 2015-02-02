@@ -1,5 +1,158 @@
 ------- VERSION CHANGES --------
 
+Version 2.4.8
+
+Bug Fixes:
+
+#715 Fixed an inability to save new users caused by the former students option added in #327
+#725 Fixes wrong stored procedure being dropped [405d712] and re-adds it to new migration #724 
+
+Feature Changes:
+
+#701 For "Scheduled" Sessions, use a Color other than green
+#611 Provide an option for populating new user groups
+
+---
+
+Version 2.4.7
+
+Bug Fixes:
+
+#645 Disallow NULL password value for setups using anonymous LDAP binds
+#666 Add MeSH(x) Label Not Displaying Correct Total (x) - Session - Objective
+#576 Filing a course removes it from the calendar search/filter widget
+#636 Show all associated student groups filter fails
+
+Feature Changes
+
+#708 Extend Calendar Feed time period from previous 5 days to previous 3 months and from next 2 months to next 3 months
+#327 Identify students once they have graduated as former students
+
+Code Quality and Development:
+
+#677 Created a special cron job just for syncing users from the directory when that task fails during the normal run.
+
+---
+
+Version 2.4.6
+
+Bug Fixes:
+
+#657 An ugly Error msg is returned when no Email address is contained in shibboleth
+#663 Course dirty state interrupts session description save
+#668 Attempting to add Learning Material to course in Firefox closes dialog and refreshes course
+#665 Fix Add Mesh label on Session Learning Materials
+
+Feature Changes
+
+#672 Make "Final" the Default Status for Uploading Learning Materials to Course and / or Session
+
+Code Quality and Development:
+
+#205 Decouple persisting learning materials from sessions/courses
+
+---
+
+Version 2.4.5
+
+Bug Fixes:
+
+#495 Modify "UC ID" labeling globally to "ID"
+#496 remove "GALEN ID" label and update the csv load
+#617 Fix Error Received While Trying to add MeSH term to Program Year
+#653 Fix upload PPTX file upload
+
+Feature Changes:
+
+#473 Provide method for adjusting "duration" for small group events
+#561 Fix CSV upload / user insert tool for instructor and learner groups
+#649 Validate curriculum inventory upload report against new corrigenda item
+
+Code Quality and Development:
+
+#302 Add Updated and Created timestamp to mesh data tables
+
+---
+
+Version 2.4.3
+
+Bug Fixes:
+
+#619: Fix detection of UTF-8 which can cause the CSV uploads to fail
+#624: Timeout LDAP connection after 2 minutes to avoid errors
+
+Feature Changes:
+
+#429: Added Support for Google Analytics
+#626: Add uc_uid length limitations to configuration
+
+Code Quality and Development:
+
+#460, #461: Test against IE 9, IE 11, Safari, and Chrome
+#621: Directly manipulate the database to speed up Behat tests
+#623: Add ldap errors to exceptions to make them easier to track
+#629: Upgraded to CodeIgniter 2.2.0
+
+---
+
+Version 2.4.2
+
+Bug Fixes:
+
+Issue #475: ILM sessions now sort correctly by date.
+Issue #610: Temporarily disabled 'Save All as Draft' button in Course/Session Manager to ensure data security/integrity until underlying issues are resolved.
+Issue #614: Added handling for semicolon-separated values returned by Shibboleth 'mail' attribute to support IDp's that provide the values for both SAML1 and SAML2-named attributes concurrently in the same field
+
+Feature Changes:
+
+Issue #424: Added script to automate regular dump of audit information to logfile instead of db
+Issue #595: Added ability to customize calendar scheduler time-step increments in configuration file
+
+Code Quality and Development:
+
+Issue #462: Increased specificity of user input (GET vs. POST)
+Issue #549: Removed deepCloneAssociativeArray() function completely
+Issue #557: Added 'CONTRIBUTING.md' file to assist new developers
+Issue #568: Reverted default 'publicly accessible' port-forwarding setting in the Vagrant configuration
+
+---
+
+Version 2.4.1
+
+Bug Fixes:
+
+Issue #545: Change in COURSE DIRECTOR or COURSE MESH TERMS causes unlinking of course objectives
+Issue #529: MyReports fails for instructor search
+
+Feature Changes:
+
+Issue #464: Run Jasmine tests on CI server
+
+---
+
+Version 2.4.0
+
+Bug Fixes:
+
+Issue #339: Notes field in Learning Materials does not alert user if max char length is exceeded
+Issue #354: DB install instructions incomplete
+Issue #375: 'required' in CI export for sessions
+Issue #380: Inability to access learning materials in shibboleth enabled systems
+
+Feature Changes:
+
+Issue #332: improved footer link usability
+Issue #334: deleted table 'database_meta'
+Issue #335: de-ajaxified the login "form"
+Issue #336: converted cucumber tests to behat
+Issue #337: streamlined auditing system
+Issue #342: rigged-up behat tests to CI process
+Issue #380: Added ability to access learning materials in shibboleth-enabled systems
+Issue #394: Enabled behat tests against vagrant
+Issue #397: Added warning for users that their calendar feed should be treated like a password
+
+---
+
 Version 2.3.2
 
 Bug Fixes:

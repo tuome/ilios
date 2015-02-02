@@ -185,7 +185,7 @@ ilios.om.transaction.saveCalendarEventToServer = function (calendarEvent) {
             + "&parent_publish_event_id=" + offeringModel.getPublishEventId()
             + "&is_recurring=" + (offeringModel.isRecurring() ? 'true' : 'false'),
         replacer = ilios.utilities.yahooJSONStringifyStateChangeListenerArgumentsReplacer,
-        stringify = ilios.utilities.yahooJSONStringForAssociativeArray;
+        stringify = ilios.utilities.stringifyObjectAsArray;
 
     var ajaxCallback = {
         success: function (resultObject) {
@@ -543,7 +543,7 @@ ilios.om.transaction.fetchAssociatedInstructorsBusyTime = function () {
 
                 if (instructor.user_id != null) {
                     model = new UserModel(instructor);
-                    displayName = model.getFormattedName(ilios.utilities.USER_NAME_FORMAT_LAST_FIRST);
+                    displayName = model.getFormattedName(ilios.utilities.UserNameFormatEnum.LAST_FIRST);
                 }
                 else {
                     displayName = instructor.title;
@@ -646,7 +646,7 @@ ilios.om.transaction.fetchAssociatedLearnerBusyTime = function () {
 
                 if (learner.user_id != null) {
                     model = new UserModel(learner);
-                    displayName = model.getFormattedName(ilios.utilities.USER_NAME_FORMAT_LAST_FIRST);
+                    displayName = model.getFormattedName(ilios.utilities.UserNameFormatEnum.LAST_FIRST);
                 }
                 else {
                     displayName = learner.title;

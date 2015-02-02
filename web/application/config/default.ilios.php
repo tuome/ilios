@@ -111,14 +111,22 @@ $config['ilios_authentication_internal_auth_salt'] = null;
 |--------------------------------------------------------------------------
 |
 | ['ilios_authentication_shibboleth_user_id_attribute']
-|     The name of an attribute passed by the Shibboleth IdP which is used to
-|     authenticate users in Ilios. Since Ilios looks up users by email address,
-|     this attribute is assumed to contain an email address as well.
+|     The name of the attribute passed by the Shibboleth IdP which is used to
+|     authenticate users in Ilios. If users are to authenticate by their email
+|     address, this should be the name of the attribute is assumed
+|     to contain the email address.
+|
+| ['ilios_authentication_field_to_match']
+|    The field in the 'authentication' or 'user' database table in Ilios against
+|    which the received shibboleth value will be compared.  Currently, the allowed
+|    values are 'email' and 'uc_uid', with 'email' being the default value
 |
 | ['ilios_authentication_shibboleth_logout_path']
 |     Absolute path to the Shibboleth Logout Service location.
+|
 */
 $config['ilios_authentication_shibboleth_user_id_attribute'] = 'mail';
+$config['ilios_authentication_field_to_match'] = 'email';
 $config['ilios_authentication_shibboleth_logout_path'] = '/Shibboleth.sso/Logout';
 
 /*
@@ -243,6 +251,8 @@ $config['tasks']['user_sync']['ldap']['host'] = 'ldaps://%%USERSYNC_LDAP_HOSTNAM
 $config['tasks']['user_sync']['ldap']['port'] = 636;
 $config['tasks']['user_sync']['ldap']['bind_dn'] = '%%USERSYNC_LDAP_BINDDN%%';
 $config['tasks']['user_sync']['ldap']['password'] = '%%USERSYNC_LDAP_PASSWORD%%';
+$config['tasks']['user_sync']['ldap']['active_student_filter'] = '%%USERSYNC_LDAP_ACTIVE_STUDENT_FILTER%%';
+$config['tasks']['user_sync']['ldap']['former_student_filter'] = '%%USERSYNC_LDAP_FORMER_STUDENT_FILTER%%';
 
 /*
 |--------------------------------------------------------------------------
@@ -273,6 +283,102 @@ $config['tasks']['enrollment_export']['learner_schools'] = range(1,5);
 $config['tasks']['enrollment_export']['participant_role'] = 'participant';
 $config['tasks']['enrollment_export']['participant_schools'] = 1;
 
+/*
+|--------------------------------------------------------------------------
+| Audit log dump, rotate, and prune configuration
+|--------------------------------------------------------------------------
+|
+| * Audit log task specific configuration
+|
+| ['tasks']['audit_log']                            configuration container for user sync process
+| ['tasks']['audit_log']['enabled']                 set to TRUE to enable audit log actions, FALSE to turn it off
+| ['tasks']['audit_log']['daily_log_file_path']     Path to the file to store daily log files, FALSE to not store daily logs
+| ['tasks']['audit_log']['history_log_file_path']   Path to the file to save historic logs before the are moved from the database
+|                                                       FALSE to not keep historic logs
+| ['tasks']['audit_log']['days_to_keep']            How many days of log entries to keep in the database, FALSE to never prune them
+| ['tasks']['audit_log']['rotate_logs']             TRUE ilios will rotate and compress log files, FALSE this can be handled by the OS or sysadmins
+|
+*/
+$config['tasks']['audit_log'] = array();
+$config['tasks']['audit_log']['enabled'] = false;
+$config['tasks']['audit_log']['daily_log_file_path'] = '/web/ilios/cron/daily_audit_logs.txt';
+$config['tasks']['audit_log']['truncate_log_file_path'] = '/web/ilios/cron/audit_logs.txt';
+$config['tasks']['audit_log']['days_to_keep'] = 90;
+$config['tasks']['audit_log']['rotate_logs'] = false;
+
+/*
+|--------------------------------------------------------------------------
+| Calender and Time Selection Option Overrides
+|--------------------------------------------------------------------------
+|
+| Option overrides for the calendar interface and hours selection fields
+|
+| ['time_selection_increments_per_hour']
+|   This sets the total increments per hour on the time-selection dropdown fields.  To display the time for every
+|   15 minutes of an hour, set this value to '4' (60 / 4 = 15), for every 10 minutes, set to '6' (60 / 6 = 10), etc.
+|
+| ['time_selection_total_increments']
+|   Set the total number of hours that will appear in the hours select list by setting the grand total of all minutes-
+|   increments in the list. A select list showing '6am - 8pm' would be 15 total hours, so you could choose one of the
+|   following:
+|   60 (@ 4 increments/hour) - :00, :15, :30, :45
+|   90 (@ 6 increments/hour) - :00, :10, :20, :30, :40, :50
+|   180 (@ 12 increments/hour) - :00, :05, :10, :15, :20, :25, :30, :35, :40, :45, :50, :55
+|
+| ['time_selection_hours_offset']
+|    The starting hour of the time selection list, offset from midnight ('6' = 06:00am)
+|
+| ['calendar_options_time_step']
+|   Customize incremental stepping of the dhtmlx calender. This is calculated by dividing 1 hour (60 minutes) by the
+|   number of increments per hour value set above.  If the increments per hour is 4, then the calendar interface will
+|   allow selections of minutes of :00, :15, :30, :45 for each hour.  6 increments/hour will allow times :00, :10, :20,
+|   :30, :40, :50 for each hour.
+*/
+
+$config['time_selection_increments_per_hour'] = 4;
+$config['time_selection_total_increments'] = 60;
+$config['time_selection_hours_offset'] = 6;
+
+//NOTE: No need to change this value! 'calendar_options_time_step' is calculated automatically based on the values
+//above.  We strongly recommend leaving the default value unchanged, as modification may result in unexpected behavior.
+$config['calendar_options_time_step'] = (60 / $config['time_selection_increments_per_hour']);
+
+/*
+|--------------------------------------------------------------------------
+| User uc_uid options
+|--------------------------------------------------------------------------
+|
+| Option overrides for setting the users uc_uid options.  Currently, the only available options are maximum and minimum
+| length. If the uid for an institution has one standardized length, set both values to match.
+|
+| ['uid_min_length']
+|   Sets the minimum length allowed for users' uc_uid
+|
+| ['uid_max_length']
+|   Sets the maximum length allowed for users' uc_uid
+|
+*/
+
+$config['uid_min_length'] = 9;
+$config['uid_max_length'] = 9;
+
+/*
+|--------------------------------------------------------------------------
+| Google Analytics Options
+|--------------------------------------------------------------------------
+|
+| If you wish to use google Analytics you must specify the tracking id for your site
+|
+| ['ga_tracking_id']
+|   The ID provided by google
+|
+| ['ga_cookie_domain']
+|   Can be left on auto for most sites
+|
+*/
+
+$config['ga_tracking_id'] = null;
+$config['ga_cookie_domain'] = 'auto';
 
 /*
 |--------------------------------------------------------------------------

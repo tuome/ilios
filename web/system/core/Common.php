@@ -6,7 +6,7 @@
  *
  * @package		CodeIgniter
  * @author		ExpressionEngine Dev Team
- * @copyright	Copyright (c) 2008 - 2011, EllisLab, Inc.
+ * @copyright	Copyright (c) 2008 - 2014, EllisLab, Inc.
  * @license		http://codeigniter.com/user_guide/license.html
  * @link		http://codeigniter.com
  * @since		Version 1.0
@@ -254,7 +254,10 @@ if ( ! function_exists('get_config'))
 			}
 		}
 
-		return $_config[0] =& $config;
+		//JH - 20141120 - changed following lines from one-liner to 2 lines to support PHP 5.6, 
+		//see issue #730 on Github (https://github.com/ilios/ilios/issues/730)
+		$_config[0] =& $config;
+		return $_config[0];
 	}
 }
 

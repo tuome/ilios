@@ -26,13 +26,15 @@
 	-- Table school
 	--
 
+DROP TABLE IF EXISTS `school`;
+SET character_set_client = utf8;
 CREATE TABLE `school` (
   `school_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   `template_prefix` VARCHAR(8) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
-  `title` VARCHAR(60) NOT NULL COLLATE 'utf8_unicode_ci',
-  `ilios_administrator_email` VARCHAR(100) NOT NULL COLLATE 'utf8_unicode_ci',
+  `title` VARCHAR(60) COLLATE 'utf8_unicode_ci' NOT NULL,
+  `ilios_administrator_email` VARCHAR(100) COLLATE 'utf8_unicode_ci' NOT NULL,
   `deleted` TINYINT(1) NOT NULL,
-  `change_alert_recipients` TEXT NULL COLLATE 'utf8_unicode_ci',
+  `change_alert_recipients` TEXT COLLATE 'utf8_unicode_ci' NULL,
   PRIMARY KEY (`school_id`),
   UNIQUE INDEX `template_prefix` (`template_prefix`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
@@ -76,6 +78,22 @@ CREATE TABLE `school` (
     UNIQUE INDEX `username` (`username`),
     CONSTRAINT `fkey_authentication_user` FOREIGN KEY (`person_id`) REFERENCES `user` (`user_id`) ON UPDATE CASCADE ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+--
+-- Table api_key
+--
+DROP TABLE IF EXISTS `api_key`;
+CREATE TABLE `api_key` (
+    `user_id` INT(10) UNSIGNED NOT NULL,
+    `api_key` VARCHAR(64) COLLATE 'utf8_unicode_ci' NOT NULL,
+    PRIMARY KEY (`user_id`),
+    UNIQUE INDEX `api_key` (`api_key`),
+    CONSTRAINT `fk_api_key_user_id` FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`) ON UPDATE CASCADE ON DELETE CASCADE
+)
+DEFAULT CHARSET='utf8'
+COLLATE='utf8_unicode_ci'
+ENGINE=InnoDB;
+
 
 	--
 	-- Table user_role
@@ -482,7 +500,9 @@ ENGINE=InnoDB;
 	  `citation` VARCHAR(512) COLLATE utf8_unicode_ci,
 	  `learning_material_status_id` INT(2) UNSIGNED NOT NULL,
 	  `learning_material_user_role_id` INT(2) UNSIGNED NOT NULL,
-	  PRIMARY KEY (`learning_material_id`) USING BTREE
+    `token` CHAR(64) COLLATE utf8_unicode_ci DEFAULT NULL,
+	  PRIMARY KEY (`learning_material_id`) USING BTREE,
+    UNIQUE INDEX `idx_learning_material_token_unique` (`token`)
 	) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
@@ -610,60 +630,26 @@ ENGINE=InnoDB;
 	  PRIMARY KEY (`alert_change_type_id`) USING BTREE
 	) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
-
-
-	--
-	-- Table audit_event
-	--
-
-	DROP TABLE IF EXISTS `audit_event`;
-	SET character_set_client = utf8;
-	CREATE TABLE `audit_event` (
-	  `audit_event_id` INT(14) UNSIGNED NOT NULL AUTO_INCREMENT,
-	  `time_stamp` TIMESTAMP NOT NULL,
-	  `user_id` INT(14) UNSIGNED,
-	  PRIMARY KEY (`audit_event_id`) USING BTREE,
-	  KEY `user_id_k` USING BTREE (`user_id`),
-	  KEY `ae_u_ts_k` USING BTREE (`audit_event_id`,`user_id`,`time_stamp`),
-	  CONSTRAINT `audit_event_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`)
-	) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
-
-	--
-	-- Table audit_atom
-	--
-
-	DROP TABLE IF EXISTS `audit_atom`;
-	SET character_set_client = utf8;
-	CREATE TABLE `audit_atom` (
-	  `audit_atom_id` INT(14) UNSIGNED NOT NULL AUTO_INCREMENT,
-	  `table_row_id` INT(14) UNSIGNED NOT NULL,
-	  `table_column` VARCHAR(50) COLLATE utf8_unicode_ci NOT NULL,
-	  `table_name` VARCHAR(50) COLLATE utf8_unicode_ci NOT NULL,
-	  `event_type` TINYINT(1) UNSIGNED NOT NULL,	-- Cr, U, D
-	  `root_atom` TINYINT(1) NOT NULL,		-- nearly every audit event should have one root atom, the 'cause' of the audit event (multi-save-offerings will not)
-	  `audit_event_id` INT(14) UNSIGNED NOT NULL,
-	  PRIMARY KEY (`audit_atom_id`) USING BTREE,
-	  KEY `audit_event_id_k` USING BTREE (`audit_event_id`),
-	  KEY `aeid_ra_k` USING BTREE (`audit_event_id`,`root_atom`),
-	  CONSTRAINT `audit_atom_ibfk_1` FOREIGN KEY (`audit_event_id`) REFERENCES `audit_event` (`audit_event_id`)
-	) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
-
-	--
-	-- Table audit_content
-	--
-
-	DROP TABLE IF EXISTS `audit_content`;
-	SET character_set_client = utf8;
-	CREATE TABLE `audit_content` (
-	  `audit_atom_id` INT(14) UNSIGNED NOT NULL,
-	  `serialized_state_event` MEDIUMBLOB NOT NULL,
-	  KEY `audit_atom_id_k` USING BTREE (`audit_atom_id`),
-	  CONSTRAINT `audit_content_ibfk_1` FOREIGN KEY (`audit_atom_id`) REFERENCES `audit_atom` (`audit_atom_id`)
-	) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-
+--
+-- Table audit_atom
+--
+DROP TABLE IF EXISTS `audit_atom`;
+SET character_set_client = utf8;
+CREATE TABLE `audit_atom` (
+    `audit_atom_id` INT(14) UNSIGNED NOT NULL AUTO_INCREMENT,
+    `table_row_id` INT(14) UNSIGNED NOT NULL,
+    `table_column` VARCHAR(50) COLLATE utf8_unicode_ci NOT NULL,
+    `table_name` VARCHAR(50) COLLATE utf8_unicode_ci NOT NULL,
+    `event_type` TINYINT(1) UNSIGNED NOT NULL,
+    `created_by` INT(14) UNSIGNED NULL DEFAULT NULL,
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`audit_atom_id`) USING BTREE,
+    INDEX `idx_audit_atom_created_at` (`created_at`),
+    CONSTRAINT `fkey_audit_atom_created_by`
+        FOREIGN KEY (`created_by`) REFERENCES `user` (`user_id`)
+)
+DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci
+ENGINE=InnoDB;
 
 	--
 	-- Table publish_event
@@ -682,28 +668,6 @@ ENGINE=InnoDB;
 	  `table_row_id` INT(14) UNSIGNED NOT NULL,			-- the primary key row id for the publish event
 	  PRIMARY KEY (`publish_event_id`) USING BTREE
 	) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
-
-
-
-	--
-	-- Table database_metadata
-	--
-	--	the row with the highest id will represent the current state of the db
-	--
-
-	DROP TABLE IF EXISTS `database_metadata`;
-	SET character_set_client = utf8;
-	CREATE TABLE `database_metadata` (
-	  `database_metadata_id` INT(14) UNSIGNED NOT NULL AUTO_INCREMENT,
-	  `time_stamp` TIMESTAMP NOT NULL,
-	  `mesh_release_version` VARCHAR(60) COLLATE utf8_unicode_ci NOT NULL,
-	  `last_som_feed` TIMESTAMP NOT NULL,
-	  `last_sis_feed` TIMESTAMP NOT NULL,
-	  `last_cp_feed` TIMESTAMP NOT NULL,
-	  PRIMARY KEY (`database_metadata_id`) USING BTREE
-	) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
-
 
 	--
 	-- Table permission
@@ -1007,7 +971,7 @@ ENGINE=InnoDB;
 	  `course_learning_material_id` INT(14) UNSIGNED NOT NULL AUTO_INCREMENT,
 	  `course_id` INT(14) UNSIGNED NOT NULL,
 	  `learning_material_id` INT(14) UNSIGNED NOT NULL,
-	  `notes` VARCHAR(500) COLLATE utf8_unicode_ci,
+	  `notes` TEXT COLLATE utf8_unicode_ci,
 	  `required` TINYINT(1) NOT NULL,				-- 1 == required, 0 == recommended
 	  `notes_are_public` TINYINT(1) NOT NULL,			-- 1 == can be seen in learner view, 0 == cannot
 	  PRIMARY KEY (`course_learning_material_id`) USING BTREE,
@@ -1051,18 +1015,27 @@ ENGINE=InnoDB;
 
 
 
-	--
-	-- Table course_director
-	--
-
-	DROP TABLE IF EXISTS `course_director`;
-	SET character_set_client = utf8;
-	CREATE TABLE `course_director` (
-	  `course_id` INT(14) UNSIGNED NOT NULL,
-	  `user_id` INT(14) UNSIGNED NOT NULL
-	) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-
+--
+-- Table course_director
+--
+DROP TABLE IF EXISTS `course_director`;
+CREATE TABLE `course_director` (
+    `course_id` INT(14) UNSIGNED NOT NULL,
+    `user_id` INT(14) UNSIGNED NOT NULL,
+    PRIMARY KEY (`course_id`, `user_id`),
+    INDEX `fkey_course_director_user_id` (`user_id`),
+    CONSTRAINT `fkey_course_director_course_id`
+        FOREIGN KEY (`course_id`)
+        REFERENCES `course` (`course_id`)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT `fkey_course_director_user_id`
+        FOREIGN KEY (`user_id`)
+        REFERENCES `user` (`user_id`)
+        ON UPDATE CASCADE ON DELETE CASCADE
+)
+DEFAULT CHARSET='utf8'
+COLLATE='utf8_unicode_ci'
+ENGINE=InnoDB;
 
 	--
 	-- Table session_x_discipline
@@ -1091,7 +1064,7 @@ ENGINE=InnoDB;
 	  `session_learning_material_id` INT(14) UNSIGNED NOT NULL AUTO_INCREMENT,
 	  `session_id` INT(14) UNSIGNED NOT NULL,
 	  `learning_material_id` INT(14) UNSIGNED NOT NULL,
-	  `notes` VARCHAR(500) COLLATE utf8_unicode_ci,
+	  `notes` TEXT COLLATE utf8_unicode_ci,
 	  `required` TINYINT(1) NOT NULL,				-- 1 == required, 0 == recommended
 	  `notes_are_public` TINYINT(1) NOT NULL,			-- 1 == can be seen in learner view, 0 == cannot
 	  PRIMARY KEY (`session_learning_material_id`) USING BTREE,
@@ -1400,9 +1373,9 @@ DROP TABLE IF EXISTS `user_sync_exception`;
 CREATE TABLE `user_sync_exception` (
 	`exception_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
 	`process_id` INT(10) UNSIGNED NOT NULL,
-	`process_name` VARCHAR(100) NOT NULL COLLATE 'utf8_unicode_ci',
+	`process_name` VARCHAR(100) COLLATE 'utf8_unicode_ci' NOT NULL,
 	`user_id` INT(10) UNSIGNED NOT NULL,
-	`exception_code` INT(10) UNSIGNED NOT NULL COLLATE 'utf8_unicode_ci',
+	`exception_code` INT(10) UNSIGNED NOT NULL,
 	`mismatched_property_name` VARCHAR(30) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
 	`mismatched_property_value` VARCHAR(150) NULL DEFAULT NULL COLLATE 'utf8_unicode_ci',
 	PRIMARY KEY (`exception_id`),
@@ -1540,6 +1513,23 @@ CREATE TABLE `curriculum_inventory_sequence_block` (
 DEFAULT CHARSET='utf8'
 COLLATE='utf8_unicode_ci'
 ENGINE=InnoDB;
+
+-- Table curriculum_inventory_sequence_block_session
+DROP TABLE IF EXISTS `curriculum_inventory_sequence_block_session`;
+CREATE TABLE `curriculum_inventory_sequence_block_session` (
+  `sequence_block_session_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `sequence_block_id` INT(10) UNSIGNED NOT NULL,
+  `session_id` INT(14) UNSIGNED NOT NULL,
+  `count_offerings_once` TINYINT default 1 NOT NULL,
+  PRIMARY KEY (`sequence_block_session_id`),
+  CONSTRAINT `fkey_ci_sequence_block_session_sequence_block_id`
+      FOREIGN KEY (`sequence_block_id`) REFERENCES `curriculum_inventory_sequence_block` (`sequence_block_id`)
+      ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT `fkey_curriculum_inventory_sequence_block_session_session_id`
+      FOREIGN KEY (`session_id`) REFERENCES `session` (`session_id`)
+      ON UPDATE CASCADE ON DELETE CASCADE,
+  UNIQUE INDEX `report_session` (`sequence_block_id`, `session_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- Table curriculum_inventory_export
 DROP TABLE IF EXISTS `curriculum_inventory_export`;

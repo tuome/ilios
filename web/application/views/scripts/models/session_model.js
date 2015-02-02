@@ -17,7 +17,8 @@ function SessionModel (dbObject) {
 
     AbstractJavaScriptModelForm.apply(this, arguments);
 
-    this.learningMaterials = new Array();
+    this.learningMaterials = [];
+    this.learningMaterialCount = 0;
 
     this.description = '';
 
@@ -79,7 +80,7 @@ function SessionModel (dbObject) {
             }
         }
         if ('undefined' != typeof dbObject.is_learner) {
-        	this.is_learner = dbObject.is_learner;
+            this.is_learner = dbObject.is_learner;
         }
     }
 
@@ -90,15 +91,13 @@ function SessionModel (dbObject) {
     this.objectives = [];
     this.objectiveCount = 0;
 
-    this.offerings = new Array();
+    this.offerings = [];
     this.offeringCount = -1;
 
     this.dirtyStateListener = {
 
             modelChanged: function (model, mockedThis) {
-                if (model.isModelDirty && (! mockedThis.isModelDirty())) {
-                    mockedThis.setDirtyAndNotify();
-                }
+                mockedThis.setDirtyAndNotify();
             }
 
     };
@@ -127,12 +126,12 @@ SessionModel.prototype.meetsMinimumPublishingRequirements = function (reviewArra
     }
 
     if (populateReviewArray) {
-        reviewObject = new Object();
+        reviewObject = {};
 
         reviewObject.displayLabel = ilios_i18nVendor.getI18NString('general.terms.title');
     }
 
-    if ((this.title == null) || (ilios.lang.trim(this.title) == '')) {
+    if ((this.title == null) || (YAHOO.lang.trim(this.title) == '')) {
         rhett = false;
 
         if (! populateReviewArray) {
@@ -159,7 +158,7 @@ SessionModel.prototype.meetsMinimumPublishingRequirements = function (reviewArra
     if (populateReviewArray) {
         reviewArray.push(reviewObject);
 
-        reviewObject = new Object();
+        reviewObject = {};
         reviewObject.displayLabel = ilios_i18nVendor.getI18NString('general.terms.has') + ' '
                                     + ilios_i18nVendor.getI18NString(
                                                                'general.terms.offering_indefinite')
@@ -167,7 +166,7 @@ SessionModel.prototype.meetsMinimumPublishingRequirements = function (reviewArra
                                     + ilios_i18nVendor.getI18NString('general.phrases.due_date');
     }
 
-    value = ilios.utilities.arraySize(this.offerings);
+    value = ilios.utilities.objectPropertyCount(this.offerings);
     if ((value == 0) && (this.independentLearningModel == null)) {
         rhett = false;
 
@@ -210,7 +209,7 @@ SessionModel.prototype.meetsSecondaryPublishingRequirements = function (reviewAr
     var reviewObject = null;
 
     if (populateReviewArray) {
-        reviewObject = new Object();
+        reviewObject = {};
 
         reviewObject.displayLabel = ilios_i18nVendor.getI18NString('general.terms.has') + ' '
                                     + ilios_i18nVendor.getI18NString(
@@ -240,13 +239,13 @@ SessionModel.prototype.meetsSecondaryPublishingRequirements = function (reviewAr
     if (populateReviewArray) {
         reviewArray.push(reviewObject);
 
-        reviewObject = new Object();
+        reviewObject = {};
         reviewObject.displayLabel = ilios_i18nVendor.getI18NString('general.terms.has') + ' '
                                     + ilios_i18nVendor.getI18NString(
                                                             'general.terms.objective_indefinite');
     }
 
-    value = ilios.utilities.arraySize(this.objectives);
+    value = ilios.utilities.objectPropertyCount(this.objectives);
     if (value == 0) {
         rhett = false;
 
@@ -269,13 +268,13 @@ SessionModel.prototype.meetsSecondaryPublishingRequirements = function (reviewAr
     if (populateReviewArray) {
         reviewArray.push(reviewObject);
 
-        reviewObject = new Object();
+        reviewObject = {};
         reviewObject.displayLabel = ilios_i18nVendor.getI18NString('general.terms.has') + ' '
                                     + ilios_i18nVendor.getI18NString(
                                                             'general.phrases.mesh_term_indefinite');
     }
 
-    value = ilios.utilities.arraySize(this.meshTerms);
+    value = ilios.utilities.objectPropertyCount(this.meshTerms);
     if (value == 0) {
         rhett = false;
 
@@ -338,7 +337,7 @@ SessionModel.prototype.getReviewArray = function () {
 SessionModel.prototype.saveAttemptWarningMessage = function () {
     var str = null;
 
-    if ((this.title == null) || (ilios.lang.trim(this.title) == '')) {
+    if ((this.title == null) || (YAHOO.lang.trim(this.title) == '')) {
         str = ilios_i18nVendor.getI18NString('course_management.error.session_save.no_title');
 
         return ilios_i18nVendor.getI18NString('course_management.error.session_save.no_title');
@@ -347,7 +346,7 @@ SessionModel.prototype.saveAttemptWarningMessage = function () {
     for (var key in this.objectives) {
         str = this.objectives[key].getTitle();
 
-        if ((str == null) || (ilios.lang.trim(str) == '')) {
+        if ((str == null) || (YAHOO.lang.trim(str) == '')) {
             return ilios_i18nVendor.getI18NString(
                                         'course_management.error.session_save.blank_objective');
         }
@@ -382,8 +381,8 @@ SessionModel.prototype.isEquipmentRequired = function () {
 };
 
 SessionModel.prototype.isLearner = function () {
-	return this.is_learner;
-}
+    return this.is_learner;
+};
 
 
 SessionModel.prototype.setSupplemental = function (flag) {
@@ -515,7 +514,7 @@ SessionModel.prototype.removeOffering = function (offeringModel) {
 };
 
 SessionModel.prototype.removeAllOfferings = function () {
-    this.offerings = new Array();
+    this.offerings = [];
     this.offeringCount = -1;
 };
 
@@ -571,7 +570,7 @@ SessionModel.prototype.setOfferingCount = function (count) {
 };
 
 SessionModel.prototype.getOfferingCount = function () {
-    return ((this.offeringCount == -1) ? ilios.utilities.arraySize(this.offerings)
+    return ((this.offeringCount == -1) ? ilios.utilities.objectPropertyCount(this.offerings)
                                        : this.offeringCount);
 };
 
@@ -582,7 +581,7 @@ SessionModel.prototype.getOfferingCount = function () {
  *  as is done in OM). This returns true if we have the offering model instances actually stored.
  */
 SessionModel.prototype.offeringStorageIsShallow = function () {
-    return (this.offeringCount != ilios.utilities.arraySize(this.offerings));
+    return (this.offeringCount != ilios.utilities.objectPropertyCount(this.offerings));
 };
 
 SessionModel.prototype.setILMAttributes = function (hours, dueDate, learnerGroups, instructors) {
@@ -672,6 +671,10 @@ SessionModel.prototype.containsLearningMaterial = function (learningMaterialMode
     return (this.getLearningMaterialForId(learningMaterialModel.getDBId()) != null);
 };
 
+SessionModel.prototype.getNextLearningMaterialNumber = function () {
+    return this.learningMaterials.length;
+};
+
 SessionModel.prototype.getNextObjectiveNumber = function () {
     this.objectiveCount++;
 
@@ -748,11 +751,16 @@ SessionModel.prototype.getFirstEventStart = function () {
     var rhett = Number.MAX_VALUE;
     var offering = null;
 
-    for (var key in this.offerings) {
-        offering = this.offerings[key];
+    //ILM sessions do not have offerings, just a single due date
+    if(this.independentLearningModel != null){
+        rhett = this.independentLearningModel.getDueDate().getTime();
+    } else {
+        for (var key in this.offerings) {
+            offering = this.offerings[key];
 
-        if (offering.getStartDate().getTime() < rhett) {
-            rhett = offering.getStartDate().getTime();
+            if (offering.getStartDate().getTime() < rhett) {
+                rhett = offering.getStartDate().getTime();
+            }
         }
     }
 
@@ -790,8 +798,12 @@ SessionModel.prototype.clone = function () {
 
     rhett.meshTerms = this.meshTerms.concat();
 
+    rhett.learningMaterials = this.learningMaterials;
+
     rhett.objectiveCount = this.objectiveCount;
-    rhett.objectives = ilios.utilities.deepCloneAssociativeArray(this.objectives);
+    rhett.objectives = this.objectives.slice(0);
+
+    rhett.description = this.description;
 
     rhett.offerings = ilios.utilities.cloneAssociativeArray(this.offerings);
 
@@ -835,18 +847,18 @@ SessionModel.prototype.compareTo = function (otherModel) {
         return 1;           // arbitrary but consistent
     }
 
-    if (ilios.utilities.arraySize(this.meshTerms)
-                            != ilios.utilities.arraySize(otherModel.meshTerms)) {
+    if (ilios.utilities.objectPropertyCount(this.meshTerms)
+                            != ilios.utilities.objectPropertyCount(otherModel.meshTerms)) {
         return 1;           // arbitrary but consistent
     }
 
-    if (ilios.utilities.arraySize(this.objectives)
-                            != ilios.utilities.arraySize(otherModel.objectives)) {
+    if (ilios.utilities.objectPropertyCount(this.objectives)
+                            != ilios.utilities.objectPropertyCount(otherModel.objectives)) {
         return 1;           // arbitrary but consistent
     }
 
-    if (ilios.utilities.arraySize(this.offerings)
-                            != ilios.utilities.arraySize(otherModel.offerings)) {
+    if (ilios.utilities.objectPropertyCount(this.offerings)
+                            != ilios.utilities.objectPropertyCount(otherModel.offerings)) {
         return 1;           // arbitrary but consistent
     }
 
@@ -855,7 +867,7 @@ SessionModel.prototype.compareTo = function (otherModel) {
 
 /**
  * If the newModel differs from this model, then it is replaced by the newModel and this is set
- *      dirty. Comparisons are done by values and not indentical instance.
+ *      dirty. Comparisons are done by values and not identical instance.
  *
  * NOTES / REMINDERS:
  *  . Any modifications to the users held by the parameter after this method is called will also
@@ -879,6 +891,8 @@ SessionModel.prototype.replaceContentWithModel = function (newModel, forceReplac
         this.objectives = newModel.objectives;
 
         this.offerings = newModel.offerings;
+
+        this.description = newModel.description;
 
         this.setDirtyAndNotify();
     }

@@ -4,6 +4,7 @@
 .buildpath
 .project
 .settings
+.DS_Store
 .vagrant
 .idea
 web/index.php
@@ -11,3 +12,10 @@ web/application/config/config.php
 web/application/config/database.php
 web/application/config/ilios.php
 tests/phpunit/phpunit.xml
+tests/behat/bin
+tests/behat/vendor
+tests/phpunit/bin
+tests/phpunit/vendor
+/bin
+/vendor
+sauce_connect.log

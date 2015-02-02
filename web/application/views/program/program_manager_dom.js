@@ -201,10 +201,13 @@ ilios.pm.dirtyStateListener = {
                 idStr = ilios.pm.generateIdStringForDirectorContent(containerNumber);
                 element = document.getElementById(idStr);
                 collapseTrio = ilios.pm.getCollapseTrioForFirstChildLevelDiv(element);
-                collapseTrio[0].innerHTML = ilios.lang.ellipsisedOfLength(directorString, 75);
+                collapseTrio[0].innerHTML = directorString;
                 collapseTrio[1].innerHTML = directorString;
 
-                if (ilios.global.preferencesModel.showProgramYearArchiving()
+                if (!ilios.preferences.preferencesModel) {
+                    ilios.preferences.installPreferencesModel();
+                }
+                if (ilios.preferences.preferencesModel.programYearArchiving
                             && model.isPublished()) {
                     idStr = ilios.pm.generateIdStringForArchivingDiv(containerNumber);
                     element = new Element(document.getElementById(idStr));
@@ -326,7 +329,7 @@ ilios.pm.populateProgramAndSetEnable = function (title, shortTitle, duration, pr
     }
 
     element = document.getElementById('expand_program_years_link');
-    element.setAttribute('style', 'display: inline;');
+    element.setAttribute('style', 'display: inherit');
 
     element = document.getElementById('add_new_program_year_link');
     ilios.dom.setElementEnabled(element, enabled);
@@ -404,7 +407,7 @@ ilios.pm.handleProgramYearDivCollapse = function (containerNumber, summaryTextDi
 };
 
 ilios.pm.getCollapseTrioForFirstChildLevelDiv = function (firstChildLevelDiv) {
-    var rhett = new Array();
+    var rhett = [];
     var parent = firstChildLevelDiv.parentNode.parentNode;
     var children = parent.getElementsByClassName('py_summary_shpeel');
 
@@ -438,7 +441,7 @@ ilios.pm.setCollapsedDivVisibility = function (widgetDiv, shouldToggle) {
     if ((verboseDiv.getStyle('display') != 'none') && shouldToggle) {
         collapseWidgetDiv.removeClass('expanded_widget');
         collapseWidgetDiv.addClass('collapsed_widget');
-        summaryDiv.setStyle('display', ((summaryDiv.tagName == 'DIV') ? 'block' : 'inline'));
+        summaryDiv.setStyle('display', 'inherit');
         verboseDiv.setStyle('display', 'none');
     } else {
         collapseWidgetDiv.removeClass('collapsed_widget');
@@ -494,7 +497,7 @@ ilios.pm.appendProgramYearComponentToDOM = function (parentElement, contentId, l
     //data column
     scratchInput = document.createElement('div');
     scratchInput.setAttribute('id', contentId);
-    scratchInput.setAttribute('class', 'read_only_data py_summary_shpeel');
+    scratchInput.setAttribute('class', 'read_only_data py_summary_shpeel truncate');
     Event.addListener(scratchInput, 'click', function () {
         ilios.pm.setCollapsedDivVisibility(this, true);
     });
@@ -514,7 +517,7 @@ ilios.pm.appendProgramYearComponentToDOM = function (parentElement, contentId, l
         scratchElement.addClass('tiny button radius');
         scratchElement.get('element').setAttribute('onclick', 'return false;');
         scratchElement.addListener('click', function (e) {
-            IEvent.fire({
+            ilios.ui.onIliosEvent.fire({
                 action: dialogAction,
                 event: searchEventName,
                 container_number: containerNumber
@@ -561,7 +564,7 @@ ilios.pm.appendObjectivesBlockToDOM = function (parentElement, containerNumber) 
     scratchElement = document.createElement('span');
     scratchElement.setAttribute('id', ilios.pm.generateIdStringForObjectiveCountSpan(containerNumber));
     scratchElement.innerHTML = '(0)';
-    textNode.appendChild(scratchElement)
+    textNode.appendChild(scratchElement);
     labelCol.appendChild(textNode);
 
 
@@ -581,7 +584,7 @@ ilios.pm.appendObjectivesBlockToDOM = function (parentElement, containerNumber) 
 
     //action column
     scratchInput = new Element(document.createElement('a'), {href: ''});
-    scratchInput.addClass('tiny radius button')
+    scratchInput.addClass('tiny radius button');
     scratchInput.get('element').setAttribute('onclick', 'return false;');
     scratchInput.addListener('click', function (e) {
         ilios.pm.addNewObjective(containerNumber);
@@ -650,7 +653,7 @@ ilios.pm.generateIdStringForStewardContent = function (containerNumber) {
 ilios.pm.getMaximumProgramYearCount = function () {
     var programDuration = ilios.pm.currentProgramModel.getDuration();
 
-    return parseInt(programDuration) + 2;
+    return parseInt(programDuration, 10) + 2;
 };
 
 // @private
@@ -660,7 +663,7 @@ ilios.pm.handleProgramYearStartYearSelect = function (containerNumber) {
 
     if (selectElement != null) {
         var option = selectElement.options[selectElement.selectedIndex];
-        var startYear = parseInt(option.value);
+        var startYear = parseInt(option.value, 10);
         var model = ilios.pm.currentProgramModel.getProgramYearForContainerNumber(containerNumber);
 
         model.setStartYear(startYear);
@@ -678,14 +681,11 @@ ilios.pm.setGraduatingClassOfText = function (containerNumber, academicStartYear
 	var collapseSummaryTextSelector = document.getElementById(containerNumber+'_collapse_summary_text');
 	var duration = ilios.pm.currentProgramModel.getDuration();
     var currentYearSelector = document.getElementById(containerNumber+'_program_year_title');
-    if(academicStartYear){
-    	var academicStartYear = academicStartYear;	
-    } else {
-    	var academicStartYear = currentYearSelector.options[currentYearSelector.selectedIndex].value;
-    }
+    academicStartYear = academicStartYear || currentYearSelector.options[currentYearSelector.selectedIndex].value;
+
     //calculate the graduation year based on the duration and get the i18N string
     var graduatingClassOfString = ilios.pm.getGraduatingClassOfString(academicStartYear, duration);
-    var yearText = academicStartYear + "-" + (parseInt(academicStartYear) + 1);
+    var yearText = academicStartYear + "-" + (parseInt(academicStartYear, 10) + 1);
     //wrap the text in parentheses..
     graduatingClassString = "("+graduatingClassOfString+")";
     //update the collapse div
@@ -745,17 +745,17 @@ ilios.pm.programYearContentGenerator = function (parentElement, containerNumber)
 
         scratchInput.appendChild(scratchOption);
     }
-   
+
     dataCol = ilios.dom.createDataCol(rowEl, scratchInput.get('element'));
     parentElement.appendChild(rowEl);
-    
+
     //Initialize the 'matriculation_year_summary_text' div...
     scratchElement = document.createElement('div');
     scratchElement.setAttribute('id', (containerNumber+'_matriculation_year_summary_text'));
     scratchElement.setAttribute('class', 'matriculation_year_summary_text');
     scratchElement.setAttribute('style', 'display:inline-block');
     dataCol.appendChild(scratchElement);
-    
+
     // Competencies
     i18nStr = ilios_i18nVendor.getI18NString('general.terms.competencies') + ' ';
     ilios.pm.appendProgramYearComponentToDOM(parentElement,
@@ -783,12 +783,15 @@ ilios.pm.programYearContentGenerator = function (parentElement, containerNumber)
         ilios.pm.generateIdStringForStewardContent(containerNumber),
         i18nStr, 'steward_picker_show_dialog', '366', containerNumber, 'gen_dialog_open');
 
-    if (ilios.global.preferencesModel.showProgramYearArchiving()) {
+    if (! ilios.preferences.preferencesModel) {
+        ilios.preferences.installPreferencesModel();
+    }
+    if (ilios.preferences.preferencesModel.programYearArchiving) {
         scratchInput = document.createElement('a');
         scratchInput.setAttribute('href', '');
         scratchInput.setAttribute('onclick', 'return false;');
         YAHOO.util.Event.addListener(scratchInput, 'click', function (e) {
-            IEvent.fire({
+            ilios.ui.onIliosEvent.fire({
                 action: 'archive_dialog_open',
                 container_number: containerNumber}
             );
@@ -808,8 +811,8 @@ ilios.pm.addNewProgramYear = function () {
     var str;
     var userCanAdd = ((ilios.pm.currentProgramModel.getDBId() != null)
         && (ilios.pm.currentProgramModel.getDBId() != '')
-        && (parseInt(ilios.pm.currentProgramModel.getDBId()) > 0));
-    
+        && (parseInt(ilios.pm.currentProgramModel.getDBId(), 10) > 0));
+
     if (userCanAdd) {
         var container = document.getElementById('program_year_container');
         var newProgramYearDOMTree = null;
@@ -829,11 +832,12 @@ ilios.pm.addNewProgramYear = function () {
 
         container.appendChild(newProgramYearDOMTree.get('element'));
 
+        var newStartYear;
         if ((containerNumber == 1) || (ilios.pm.currentProgramModel.getProgramYearCount() == 0)) {
-        	
-        	//set the newStartYear equal to the current year for the matriculation summary...
-        	var newStartYear = (new Date()).getFullYear();
-        	
+
+            //set the newStartYear equal to the current year for the matriculation summary...
+            newStartYear = (new Date()).getFullYear();
+
             programYearModel = new ProgramYearModel();
 
             programYearModel.addStateChangeListener(ilios.pm.dirtyStateListener, null);
@@ -847,7 +851,7 @@ ilios.pm.addNewProgramYear = function () {
             var textListContent = null;
             var modelArray = null;
             var currentYear = (new Date()).getFullYear();
-            var newStartYear = 0;
+            newStartYear = 0;
             var maximumProgramYears = ilios.pm.getMaximumProgramYearCount();
             var i = containerNumber - 1;
             var previousProgramYearModel = null;
@@ -857,10 +861,10 @@ ilios.pm.addNewProgramYear = function () {
             var length = 0;
 
             for (; i > 0; i--) {
-            	 previousProgramYearModel = ilios.pm.currentProgramModel.getProgramYearForContainerNumber(i);
-            	
+                previousProgramYearModel = ilios.pm.currentProgramModel.getProgramYearForContainerNumber(i);
+
                 if (previousProgramYearModel != null) {
-                    programYearModel = previousProgramYearModel.clone();   
+                    programYearModel = previousProgramYearModel.clone();
                     break;
                 }
             }
@@ -879,9 +883,8 @@ ilios.pm.addNewProgramYear = function () {
                 scratchElement = document.getElementById(titleId);
                 collapseTrio = ilios.pm.getCollapseTrioForFirstChildLevelDiv(scratchElement);
                 str = ilios.competencies.generateSummaryStringForSelectedCompetencies(modelArray);
-                collapseTrio[0].innerHTML = ilios.lang.ellipsisedOfLength(str, 75);
-                str = ilios.competencies.generateListHTMLForSelectedCompetencies(modelArray);
-                collapseTrio[1].innerHTML = str;
+                collapseTrio[0].innerHTML = str;
+                ilios.competencies.appendListForSelectedCompetencies(collapseTrio[1], modelArray);
             }
 
             modelArray = programYearModel.getDisciplineArray();
@@ -891,7 +894,7 @@ ilios.pm.addNewProgramYear = function () {
                 titleId = ilios.pm.generateIdStringForDisciplineContent(containerNumber);
                 scratchElement = document.getElementById(titleId);
                 collapseTrio = ilios.pm.getCollapseTrioForFirstChildLevelDiv(scratchElement);
-                collapseTrio[0].innerHTML = ilios.lang.ellipsisedOfLength(textListContent, 75);
+                collapseTrio[0].innerHTML = textListContent;
                 collapseTrio[1].innerHTML = textListContent;
             }
 
@@ -902,7 +905,7 @@ ilios.pm.addNewProgramYear = function () {
                 titleId = ilios.pm.generateIdStringForDirectorContent(containerNumber);
                 scratchElement = document.getElementById(titleId);
                 collapseTrio = ilios.pm.getCollapseTrioForFirstChildLevelDiv(scratchElement);
-                collapseTrio[0].innerHTML = ilios.lang.ellipsisedOfLength(textListContent, 75);
+                collapseTrio[0].innerHTML = textListContent;
                 collapseTrio[1].innerHTML = textListContent;
             }
 
@@ -921,7 +924,7 @@ ilios.pm.addNewProgramYear = function () {
                 titleId = ilios.pm.generateIdStringForStewardContent(containerNumber);
                 scratchElement = document.getElementById(titleId);
                 collapseTrio = ilios.pm.getCollapseTrioForFirstChildLevelDiv(scratchElement);
-                collapseTrio[0].innerHTML = ilios.lang.ellipsisedOfLength(textListContent, 75);
+                collapseTrio[0].innerHTML = textListContent;
                 collapseTrio[1].innerHTML = textListContent;
             }
 
@@ -939,7 +942,7 @@ ilios.pm.addNewProgramYear = function () {
             }
 
             ilios.pm.currentProgramModel.addProgramYear(programYearModel, ('' + containerNumber));
-            
+
             ilios.pm.updateObjectiveCountText(containerNumber);
 
             programYearModel.addStateChangeListener(ilios.pm.dirtyStateListener, null);
@@ -993,7 +996,7 @@ ilios.pm.buildAndPopulateObjective = function (containerNumber, objectiveNumber,
     // register click event handler on objective description container
     Event.addListener(scratchElement, "click", function (e) { // pop up the "edit objective" dialog
         ilios.pm.eot.inEditObjectiveModel = objectiveModel;
-        IEvent.fire({
+        ilios.ui.onIliosEvent.fire({
             action: 'eot_dialog_open',
             cnumber: containerNumber
         });
@@ -1009,7 +1012,7 @@ ilios.pm.buildAndPopulateObjective = function (containerNumber, objectiveNumber,
     scratchInput.setAttribute('href', '');
     scratchInput.setAttribute('onclick', 'return false;');
     Event.addListener(scratchInput, 'click', function (e) {
-        IEvent.fire({
+        ilios.ui.onIliosEvent.fire({
             action: 'mesh_picker_dialog_open',
             model_in_edit: objectiveModel,
             cnumber: containerNumber
@@ -1038,7 +1041,7 @@ ilios.pm.deleteObjective = function (event) {
     var args = {
         "cnumber": target.getAttribute("cnumber"),
         "onumber": target.getAttribute("onumber")
-    }
+    };
     ilios.alert.inform(deleteObjectiveStr, yesStr, ilios.pm.continueDeletingObjective, args);
 };
 
@@ -1061,7 +1064,7 @@ ilios.pm.continueDeletingObjective = function(event, args) {
     model.removeObjectiveForContainer(objectiveNumber);
     ilios.pm.updateObjectiveCountText(containerNumber);
     this.hide();
-}
+};
 
 /**
  * Initiates the addition of a new objective to a program year by firing up the "objective" dialog.
@@ -1071,7 +1074,7 @@ ilios.pm.continueDeletingObjective = function(event, args) {
 ilios.pm.addNewObjective = function (containerNumber) {
     ilios.pm.eot.inEditObjectiveModel = null; // reset the objective model
     // fire up the objective dialog
-    IEvent.fire({
+    ilios.ui.onIliosEvent.fire({
         action: 'eot_dialog_open',
         cnumber: containerNumber
     });
@@ -1102,7 +1105,7 @@ ilios.pm.updateObjectiveCountText = function (containerNumber) {
         var idString = ilios.pm.generateIdStringForObjectiveCountSpan(containerNumber);
         var element = document.getElementById(idString);
 
-        element.innerHTML = '(' + ilios.utilities.arraySize(model.getObjectives()) + ')';
+        element.innerHTML = '(' + ilios.utilities.objectPropertyCount(model.getObjectives()) + ')';
     }
 };
 
@@ -1286,7 +1289,7 @@ ilios.pm.alterProgramYearUIToReflectLockedState = function (containerNumber, upd
         element = childElement.parentNode;
         element.removeChild(childElement);
         childElement = document.createElement('span');
-        childElement.setAttribute('style', 'font-weight: bold; font-size: 9pt;')
+        childElement.setAttribute('style', 'font-weight: bold; font-size: 9pt;');
         childElement.innerHTML = ('' + model.getStartYear() + '-' + (model.getStartYear() + 1));
         element.appendChild(childElement);
     }
@@ -1315,7 +1318,7 @@ ilios.common.picker.mesh.handleMeSHPickerSave = function (dialogPanel) {
 
 /**
  * Returns the 'Graduating Class of XXXX' string when given the startYear and duration of a program
- * 
+ *
  * @method ilios.pm.getGraduatingClassOfString
  * @param {Number} startYear the starting year of the academic/matriculation year of the program
  * @param {Number} duration the duration of the program
@@ -1324,6 +1327,202 @@ ilios.common.picker.mesh.handleMeSHPickerSave = function (dialogPanel) {
 
 ilios.pm.getGraduatingClassOfString = function (startYear, duration) {
 	var graduatingClassOfStr = ilios_i18nVendor.getI18NString('general.phrases.graduating_class_of');
-	var rhett = graduatingClassOfStr+" "+(parseInt(startYear) + parseInt(duration));
+	var rhett = graduatingClassOfStr+" "+(parseInt(startYear, 10) + parseInt(duration, 10));
     return rhett;
-}
+};
+
+// @private
+ilios.pm.disableAddProgramYearLink = function (un, deux, trois) {
+    var element = document.getElementById('add_new_program_year_link');
+
+    ilios.dom.setEnableForAElement(element, false);
+};
+
+/**
+ * @method ilios.pm.disc_initDialog
+ *
+ * Initializes the dialog and rigs event handling up to it.
+ */
+ilios.pm.disc_initDialog = function (who, knows, args) {
+    var autolistContainer = "discipline_autolist";
+    var textInputFieldForAutoComplete = "discipline_name_input";
+
+    var disc_currentlySelectedModels = [];
+    var disc_dataSource = new YAHOO.util.XHRDataSource(controllerURL + 'getDisciplineList');
+    var disc_hiddenFormElement = "discipline_hidden_input";
+    var disc_listingTextField = "discipline_picker_selected_text_list";
+    var disc_selectedItemContainer = "discipline_picked";
+
+
+    disc_dataSource.responseType = YAHOO.util.XHRDataSource.TYPE_XML;
+    disc_dataSource.responseSchema = { resultNode: "Result", fields: ["title", "discipline_id"] };
+
+    /*
+     * dialog has an attribute set on it through its display handler which represents the
+     * container number for which it is about to display.
+     */
+    var getProgramYearModelAssociatedToDialog = function (dialog) {
+        var containerNumber = dialog.containerNumber;
+        return ilios.pm.currentProgramModel.getProgramYearForContainerNumber(containerNumber);
+    };
+
+
+    /*
+     * We'll receive notification via this when the user click-selects an item from the
+     *    candidate list.
+     *
+     * @param rowSelection a map of the db row data representation for the user's selection
+     * @see ilios.ui.setupDialogAutoComplete
+     */
+    var disc_handleSelect = function (rowSelection) {
+
+        var model = new DisciplineModel();
+        model.setDBId(rowSelection.discipline_id);
+        model.setTitle(rowSelection.title);
+
+        var listElement = document.getElementById("discipline_picked");
+        var liElement = document.createElement("li");
+        var textNode = document.createTextNode(model.getTitle());
+        var selectedModels = disc_currentlySelectedModels;
+
+        selectedModels.push(model);
+
+        liElement.appendChild(textNode);
+        liElement.iliosModel = model;
+
+        listElement.appendChild(liElement);
+
+        return liElement;
+    }; // end function
+
+    /*
+     * We'll receive notification via this when the user click-deletes an item from the
+     *    selected list.
+     *
+     * @param event actual click event
+     * @see ilios.dom.generateAutoCompleteDialogMarkup
+     */
+    var disc_handleDeselect = function (event) {
+
+        var i, n;
+        var model;
+        var selectedModels = disc_currentlySelectedModels;
+        var target = ilios.utilities.getEventTarget(event);
+        var listElement = document.getElementById("discipline_picked");
+        if ("li" === target.tagName.toLowerCase()) {
+            model = target.iliosModel;
+            for (i = 0, n = selectedModels.length; i < n; i++) {
+                if (model.getDBId() === selectedModels[i].getDBId()) {
+                    selectedModels.splice(i, 1);
+                    break;
+                }
+            }
+        }
+    }; // end function
+
+    /*
+     * This will get messaged just prior to the dialog being displayed to the user.
+     *
+     * @param dialog a handle to the actual dialog instance which is about to be
+     *            displayed
+     * @see ilios.dom.buildDialogPanel
+     */
+    var disc_handleDialogDisplay = function (dialog) {
+
+        var i, n;
+        var parentModel = getProgramYearModelAssociatedToDialog(dialog);
+        var picker = document.getElementById( disc_selectedItemContainer);
+        var localModels = parentModel.getDisciplineArray();
+        var selectedModels = [];
+        picker.innerHTML = "";
+
+        selectedModels = null;
+
+        if (localModels != null) {
+            var model = null;
+            var liElement = null;
+            selectedModels = localModels.slice(0);
+
+            // repopulate picker list to reflect the display
+            for (i = 0, n = selectedModels.length; i < n; i++) {
+                model = selectedModels[i];
+                liElement = document.createElement("li");
+                liElement.iliosModel = model;
+                liElement.innerHTML = model.title;
+                picker.appendChild(liElement);
+            }
+        }
+        disc_currentlySelectedModels = selectedModels;
+        return true;
+    }; // end function
+
+
+    /*
+     * This will get messaged when the user clicks the submit button on the dialog (this
+     *        button is currently display-text'd as "Done")
+     *
+     * @see ilios.dom.buildDialogPanel
+     */
+    var disc_submitMethod = function () {
+
+        var textFieldContent = "";
+        var modelTitles = [];
+        var i, n;
+        var containerNumber = this.containerNumber; // "this" should be the Dialog instance
+        var inputTextId = containerNumber + "_" + disc_listingTextField;
+        var parentModel = getProgramYearModelAssociatedToDialog(this);
+        var element = null;
+        var selectedModels = disc_currentlySelectedModels;
+
+        parentModel.setDisciplineArray(selectedModels);
+
+        for (i = 0, n = selectedModels.length; i < n; i++) {
+            modelTitles.push(selectedModels[i].getTitle());
+        }
+        modelTitles.sort();
+        textFieldContent = modelTitles.join(";");
+
+        element = document.getElementById(inputTextId + "_full");
+        if (element != null) {
+            element.innerHTML = textFieldContent;
+            element = document.getElementById(inputTextId);
+            element.innerHTML = textFieldContent;
+        } else {
+            element = document.getElementById(inputTextId);
+            element.innerHTML = textFieldContent;
+        }
+    }; // end function
+
+
+
+    ilios.dom.generateAutoCompleteDialogMarkup({
+        deselect_handler: disc_handleDeselect,
+        selected_label: "general.terms.topics",
+        instructions: "general.text.discipline_search_instructions",
+        container: args['container'],
+        hidden: disc_hiddenFormElement,
+        tabs: {autocomplete: "discipline_autocomplete_tab"},
+        acinput: textInputFieldForAutoComplete,
+        aclist: autolistContainer,
+        picked: disc_selectedItemContainer
+    });
+
+    ilios.dom.buildDialogPanel({}, {}, {
+        trigger: args['trigger'],
+        target: disc_selectedItemContainer,
+        hidden: disc_hiddenFormElement,
+        input: disc_listingTextField,
+        submit_override: disc_submitMethod,
+        display_handler: disc_handleDialogDisplay,
+        container: args['container']
+    });
+
+    ilios.ui.setupDialogAutoComplete({
+        target: disc_selectedItemContainer,
+        input: textInputFieldForAutoComplete,
+        container: autolistContainer,
+        remote_data: disc_dataSource,
+        select_handler: disc_handleSelect,
+        max_displayed_results: 150
+    });
+};

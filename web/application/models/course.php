@@ -96,10 +96,8 @@ class Course extends Ilios_Base_Model
         $newCourseId = $this->db->insert_id();
 
         if ($newCourseId > 0) {
-            array_push($auditAtoms,
-                       $this->auditEvent->wrapAtom($newCourseId, 'course_id',
-                                                   $this->databaseTableName,
-                                                   Ilios_Model_AuditUtils::CREATE_EVENT_TYPE, 1));
+            $auditAtoms[] = Ilios_Model_AuditUtils::wrapAuditAtom($newCourseId, 'course_id', $this->databaseTableName,
+                Ilios_Model_AuditUtils::CREATE_EVENT_TYPE);
 
             $dtOriginalCourseStartTime = new DateTime($courseRow->start_date);
             $dtRolledOverCourseStartTime = new DateTime($newRow['start_date']);
@@ -197,6 +195,25 @@ class Course extends Ilios_Base_Model
         }
     }
 
+    /**
+     * Performs a title search for courses belonging to a given
+     * school that a given user has access to, regardless of
+     * whether or not the 'archived' bit is set, as the calendar
+     * should display courses whether or not they have been archived.
+     * @param string $title the course title
+     * @param int $schoolId the school id
+     * @param int $uid the user id
+     * @return CI_DB_result a db query result object
+     */
+    public function getCoursesFilteredOnTitleMatchForCalendar ($title, $schoolId, $uid)
+    {
+        if (! $title) { // get all
+            return $this->_getCoursesForCalendar($schoolId, $uid);
+        } else { // search
+            return $this->_searchCoursesByTitleForCalendar($title, $schoolId, $uid);
+        }
+    }
+
 
     /**
      * Retrieves all courses belonging to a given school
@@ -216,6 +233,27 @@ class Course extends Ilios_Base_Model
     	. $clean['uid'] . ')';
 
     	return $this->db->query($sql);
+    }
+
+    /**
+     * Retrieves all courses belonging to a given school
+     * and that a given user has access to regardless
+     * of whether or not the course has been archived.
+     * @param int $schoolId the school id
+     * @param int $uid the user id
+     * @return CI_DB_result a db query result object
+     */
+    protected function _getCoursesForCalendar ($schoolId, $uid)
+    {
+        $clean = array();
+        $clean['school_id'] = (int) $schoolId;
+        $clean['uid'] = (int) $uid;
+
+        $sql  = 'CALL courses_with_title_restricted_by_school_for_user_calendar('
+            . '"%%", ' . $clean['school_id'] . ', '
+            . $clean['uid'] . ')';
+
+        return $this->db->query($sql);
     }
 
     /**
@@ -243,6 +281,40 @@ class Course extends Ilios_Base_Model
         } else {
             // full wildcard search
             $sql  = 'CALL courses_with_title_restricted_by_school_for_user('
+                . '"%' . $clean['title'] . '%", ' . $clean['school_id'] . ', '
+                . $clean['uid'] . ')';
+        }
+
+        return $this->db->query($sql);
+    }
+
+    /**
+     * Performs a title search for courses belonging to a given
+     * school and that a given user has access to regardless of
+     * whether or not they have been archived, as the calendar
+     * should display all courses, even if they are archived.
+     * @param string $title the course title
+     * @param int $schoolId the school id
+     * @param int $uid the user id
+     * @return CI_DB_result a db query result object
+     */
+    protected function _searchCoursesByTitleForCalendar ($title, $schoolId, $uid)
+    {
+        $clean = array();
+        $clean['school_id'] = (int) $schoolId;
+        $clean['uid'] = (int) $uid;
+        $clean['title'] = $this->db->escape_like_str($title);
+
+        $len = strlen($title);
+
+        if (Ilios_Base_Model::WILDCARD_SEARCH_CHARACTER_MIN_LIMIT > $len) {
+            // trailing wildcard search
+            $sql  = 'CALL courses_with_title_restricted_by_school_for_user_calendar('
+                . '"' . $clean['title'] . '%", ' . $clean['school_id'] . ', '
+                . $clean['uid'] . ')';
+        } else {
+            // full wildcard search
+            $sql  = 'CALL courses_with_title_restricted_by_school_for_user_calendar('
                 . '"%' . $clean['title'] . '%", ' . $clean['school_id'] . ', '
                 . $clean['uid'] . ')';
         }
@@ -281,15 +353,15 @@ class Course extends Ilios_Base_Model
         $this->db->insert($this->databaseTableName, $newRow);
 
         $newId = $this->db->insert_id();
-        array_push($auditAtoms, $this->auditEvent->wrapAtom($newId, 'course_id',
-                                                            $this->databaseTableName,
-                                                            Ilios_Model_AuditUtils::CREATE_EVENT_TYPE, 1));
+        $auditAtoms[] = Ilios_Model_AuditUtils::wrapAuditAtom($newId, 'course_id', $this->databaseTableName,
+            Ilios_Model_AuditUtils::CREATE_EVENT_TYPE);
 
         return $newId;
     }
 
     /**
-     * Updates a given course and its associated data, such as objectives, learning materials etc.
+     * Updates a given course and its associated data, such as objectives, etc, but not
+     * learning materials (as LM's have been decoupled from course/session CRUD as of #205)
      * Note: Transactionality is expected to be handled outside of this method.
      *
      * @param int $courseId
@@ -303,7 +375,6 @@ class Course extends Ilios_Base_Model
      * @param array $directorsArray
      * @param array $meshTermArray
      * @param array $objectiveArray
-     * @param array $learningMaterialArray
      * @param int $publishId
      * @param int $publishAsTDB
      * @param int $clerkshipTypeId
@@ -315,7 +386,7 @@ class Course extends Ilios_Base_Model
      */
     public function saveCourseWithId ($courseId, $title, $externalId, $startDate, $endDate, $courseLevel,
         array $cohortArray, array $disciplinesArray, array $directorsArray, array $meshTermArray,
-        array $objectiveArray, array $learningMaterialArray, $publishId, $publishAsTBD,
+        array $objectiveArray, $publishId, $publishAsTBD,
         $clerkshipTypeId, array &$auditAtoms)
     {
         $rhett = array();
@@ -332,9 +403,8 @@ class Course extends Ilios_Base_Model
         $this->db->where('course_id', $courseId);
         $this->db->update($this->databaseTableName, $updateRow);
 
-        array_push($auditAtoms, $this->auditEvent->wrapAtom($courseId, 'course_id',
-                                                            $this->databaseTableName,
-                                                            Ilios_Model_AuditUtils::CREATE_EVENT_TYPE, 1));
+        $auditAtoms[] = Ilios_Model_AuditUtils::wrapAuditAtom($courseId, 'course_id', $this->databaseTableName,
+            Ilios_Model_AuditUtils::CREATE_EVENT_TYPE);
 
         $this->performCrossTableInserts($cohortArray, 'course_x_cohort', 'cohort_id', 'course_id',
                                         $courseId, 'cohortId');
@@ -347,22 +417,6 @@ class Course extends Ilios_Base_Model
 
         $this->performCrossTableInserts($meshTermArray, 'course_x_mesh', 'mesh_descriptor_uid',
                                         'course_id', $courseId);
-
-        foreach ($learningMaterialArray as $key => $val) {
-            $meshTerms = $val['meshTerms'];
-            $notes = $val['notes'];
-            $required = ($val['required'] == 'true');
-            $notesArePubliclyViewable = ($val['notesArePubliclyViewable'] == 'true');
-
-            if ((! is_null($notes)) && (strlen($notes) == 0)) {
-                $notes = null;
-            }
-
-            $this->learningMaterial->associateLearningMaterial($val['dbId'], $courseId, true,
-                                                               $auditAtoms, $meshTerms, $notes,
-                                                               $required,
-                                                               $notesArePubliclyViewable);
-        }
 
         $rhett['objectives'] = $this->objective->saveObjectives($objectiveArray, 'course_x_objective', 'course_id',
             $courseId, $auditAtoms);
@@ -392,9 +446,8 @@ class Course extends Ilios_Base_Model
         $this->db->update($this->databaseTableName, $updateRow);
 
 
-        array_push($auditAtoms, $this->auditEvent->wrapAtom($courseId, 'course_id',
-                                                            $this->databaseTableName,
-                                                            Ilios_Model_AuditUtils::UPDATE_EVENT_TYPE, 1));
+        $auditAtoms[] = Ilios_Model_AuditUtils::wrapAuditAtom($courseId, 'course_id', $this->databaseTableName,
+            Ilios_Model_AuditUtils::UPDATE_EVENT_TYPE);
     }
 
     /**
@@ -660,6 +713,27 @@ EOL;
             $this->db->where('deleted', 0);
             $this->db->where('publish_event_id != ', 'NULL');
             $this->db->where('archived', 0);
+            $this->db->where('owning_school_id', $schoolId);
+            $this->db->where('year', $year);
+
+            $results = $this->db->get($this->databaseTableName);
+
+            foreach ($results->result_array() as $row) {
+                $row['unique_id'] = $this->getUniqueId($row['course_id']);
+                array_push($retval, $row);
+            }
+        }
+        return $retval;
+    }
+
+    public function getCoursesForAcademicYearForCalendar ($year, $schoolId)
+    {
+
+        $retval = array();
+
+        if (isset($schoolId)) {
+            $this->db->where('deleted', 0);
+            $this->db->where('publish_event_id != ', 'NULL');
             $this->db->where('owning_school_id', $schoolId);
             $this->db->where('year', $year);
 

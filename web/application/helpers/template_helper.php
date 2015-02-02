@@ -8,26 +8,74 @@
 
 if (! function_exists('ilios_print_daytime_options')) {
     /**
-     * Prints out <code>option</code> tags for day times in 15min intervals
+     * Prints out <code>option</code> tags for day times in specified intervals
      * within given boundaries.
      *
-     * @param int $start
-     * @param int $end
-     * @param int $hoursOffset
-     *
-     * @todo improve code docs. [ST 2013/11/22]
+     * @param boolean $is_end_time True if the selection will be setting the 'end' or 'finish' time of an event
+     * @param int $start_increment The starting minutes increment index in each hour
+     * @param int $end_increment Total count of minutes increments in entire options list, 60 (@ 4/hr) = 15 hours
      */
-    function ilios_print_daytime_options ($start = 0, $end = 60, $hoursOffset = 6) {
-        for ($i = $start; $i < $end; $i++) {
-            $hours = floor($i / 4) + $hoursOffset;
-            $minutes = ($i % 4) * 15;
 
+    function ilios_print_daytime_options ($is_end_time = false, $start_increment = null, $end_increment = null) {
+        //pass in the current CI instance to access the configuration info
+        $CI =& get_instance();
+
+        //if there is no value set for $end_increment, get it from the config file...
+        if(!isset($end_increment)) {
+            //check/set it from the config file
+            if($CI->config->item('time_selection_total_increments')) {
+                $end_increment = $CI->config->item('time_selection_total_increments');
+            } else {
+                //if not specified and not in the config file, set default of '60' (15 hours in 15 minute increments)
+                $end_increment = 60;
+            }
+            //if the values will be populating an 'end time' value and no $end_increment has been specified,
+            //increase the default $end_increment by 1 to properly offset itself from its respective 'start' timeslot
+            if($is_end_time) {
+                $end_increment++;
+            }
+        }
+
+        //if there is no value set for $start_increment, set it to the default of 0 (:00)
+        if(!isset($start_increment)) {
+            $start_increment = 0;
+            //if the value will be populating an 'end time' value and no $start_increment has been specified, increase
+            //the default $start_increment by 1 to properly offset itself from the its respective 'start time' timeslot
+            if($is_end_time) {
+                $start_increment++;
+            }
+        }
+
+        //check for the $hoursOffset override in the config file
+        if($CI->config->item('time_selection_hours_offset')) {
+            $hoursOffset = $CI->config->item('time_selection_hours_offset');
+        } else {
+            //set the start hour default to 6 for a '06:00' start time in the options list
+            $hoursOffset = 6;
+        }
+
+        //check for the $incrementsPerHour override in the config file
+        if($CI->config->item('time_selection_increments_per_hour')) {
+            $incrementsPerHour = $CI->config->item('time_selection_increments_per_hour');
+        } else {
+            //Set default of '4' which would reflect :00, :15, :30, :45...
+            $incrementsPerHour = 4;
+        }
+
+        //run the loop that will set all the time options
+        for ($i = $start_increment; $i < $end_increment; $i++) {
+            $hours = floor($i / $incrementsPerHour) + $hoursOffset;
+            //set the increment multiplier based on number of increments in one hour (60 mins)
+            $minutes = ($i % $incrementsPerHour) * (60 / $incrementsPerHour);
+
+            //append a '0' to the front of hours less-than '10'
             if ($hours < 10) {
                 $hours = '0' . $hours;
             }
 
-            if ($minutes == 0) {
-                $minutes = '00';
+            //append a '0' to the front of minutes less-than '10'
+	        if ($minutes < 10) {
+                $minutes = '0' . $minutes;
             }
             $string = $hours . ':' . $minutes;
             echo '<option value="' . $string . '">' . $string . '</option>';
@@ -59,164 +107,6 @@ if ( ! function_exists('generateProgressDivMarkup')) {
 
         return $rhett;
     }
-}
-
-if (! function_exists('createContentContainerMarkup')) {
-    /**
-     * Markup generator function for "primary content" container elements (i.e. 'program' of the program & program years).
-     *
-     * @param string $formPrefix Markup prefixing the container element.
-     * @param string $addNewEntityLink Markup containing the "add new <entity>" link or button.
-     * @param string $searchNewEntityLink Markup containing the "search <entities>" link or button.
-     * @param string $entityContainerHeader Markup that goes into the container header.
-     * @param string $entityContainerContent Markup that goes into the container body.
-     * @param string $addNewSomethingId Id-attribute of the "add new <related entity>" button.
-     *      If a falsy value is provided then the button will not be rendered.
-     * @param string $addNewSomethingAction JavaScript code. Goes into the inline "onclick" event handler of the
-     *      "add new <related entity>" button.
-     * @param string $addNewSomethingDisplayText The label of the "add new <related entity>" button.
-     * @param string $suffixingContent Markup that goes below the container body.
-     * @param string $saveDraftAction JavaScript code. Goes into the inline "onclick" event handler of the
-     *      "save as draft" button.
-     * @param string $publishAction JavaScript code. Goes into the inline "onclick" event handler of the
-     *      "publish" button.
-     * @param string $revertAction JavaScript code. Goes into the inline "onclick" event handler of the
-     *      "reset form" button.
-     * @param boolean $shouldShowSavePublishRevertButtons If TRUE then the "publish", "save draft" and "reset form"
-     *      buttons will be rendered, otherwise not.
-     * @param boolean $showPublishDraftStatus If TRUE then the generated container markup will contain a section
-     *      for displaying publish-status information.
-     * @param boolean $showPublishAllButton If TRUE then "publish all" button will be rendered.
-     * @param boolean $showSaveAllLink If TRUE then the "save all" button will be rendered.
-     * @param string $saveAllString The label-text of the "save all" button.
-     * @param string $saveDraftString The label-text of the "save as draft" button.
-     * @param string $publishAllString The label-text of the "publish all" button.
-     * @param string $publishNowString The label-text of the "publish now" button.
-     * @param string $resetFormString The label-text of the "reset form" button.
-     * @param boolean $showArchivingLinkDiv If TRUE then the container element for the "archive" button will be rendered.
-     * @param boolean $showRolloverLinkDiv If TRUE then the container element for the "rollover" button will be rendered.
-     *
-     * @todo Junk this god-awful mess. [ST 2013/06/18]
-     */
-    function createContentContainerMarkup ($formPrefix, $addNewEntityLink, $searchNewEntityLink, $entityContainerHeader,
-                                           $entityContainerContent, $addNewSomethingId, $addNewSomethingAction,
-                                           $addNewSomethingDisplayText, $suffixingContent, $saveDraftAction,
-                                           $publishAction, $revertAction, $shouldShowSavePublishRevertButtons,
-                                           $showPublishDraftStatus, $showPublishAllButton,$showSaveAllLink,
-                                           $saveAllString, $saveDraftString, $publishAllString,
-                                           $publishNowString, $resetFormString, $showArchivingLinkDiv = false,
-                                           $showRolloverLinkDiv = false)
-    {
-        ?>
-        <div class="content_container">
-            <div class="master_button_container clearfix">
-                <ul class="buttons left">
-                    <li>
-                        <?php
-                        if ($searchNewEntityLink) :
-                        echo $searchNewEntityLink;
-                        ?>
-                    </li>
-                    <?php
-                    endif;
-                    if ($addNewEntityLink != '') :
-                    ?>
-                    <li>
-                        <?php
-                        echo $addNewEntityLink;
-                        endif;
-                        ?>
-                    </li>
-                </ul>
-                <ul class="buttons right">
-                    <?php
-                    if ($showRolloverLinkDiv) :
-                        ?>
-                        <li id="rollover_link_div" class="rollover_link_div"></li>
-                    <?php
-                    endif;
-                    if ($showArchivingLinkDiv) :
-                        ?>
-                        <li id="archiving_link_div" class="archiving_link_div"></li>
-                    <?php
-                    endif;
-                    ?>
-                    <li>
-                        <?php
-                        if ($showSaveAllLink) :
-                            ?>
-                            <button id="save_all_dirty_to_draft" class="medium radius button" disabled='disabled'><?php echo $saveAllString ?></button>
-                        <?php
-                        endif;
-                        ?>
-                    </li>
-                    <?php
-                    if ($showPublishAllButton) :
-                        ?>
-                        <li>
-                            <button id="publish_all" class="medium radius button" disabled='disabled'><i class="icon-checkmark"></i><?php echo $publishAllString ?></button>
-                        </li>
-                    <?php
-                    endif;
-                    ?>
-                </ul>
-            </div>
-            <?php echo $formPrefix; ?>
-            <div class="entity_container level-1">
-                <div class="hd clearfix">
-                    <div class="toggle">
-                        <a href="#" id="show_more_or_less_link"
-                           onclick="ilios.utilities.toggle('course_more_or_less_div', this); return false;" >
-                            <i class="icon-plus" aria-hidden = "true"> </i>
-                        </a>
-                    </div>
-                    <ul>
-                        <?php
-                        echo $entityContainerHeader;
-
-                        if ($showPublishDraftStatus) :
-                            ?>
-                            <li class="publish-status">
-                                <span class="data-type">Publish Status</span>
-                                <span class="data" id="parent_publish_status_text"></span>
-                            </li>
-
-                        <?php
-                        endif;
-                        ?>
-
-                    </ul>
-                </div>
-                <div id="course_more_or_less_div" class="bd" style="display:none">
-
-
-                    <?php
-                    echo $entityContainerContent;
-                    if ($shouldShowSavePublishRevertButtons) :
-                        ?>
-                        <div class="buttons bottom">
-                            <button id="draft_button" class="medium radius button" disabled="disabled" onClick="<?php echo $saveDraftAction ?>"><?php echo $saveDraftString ?></button>
-                            <button id="publish_button" class="medium radius button" disabled="disabled" onClick="<?php echo $publishAction ?>"><?php echo $publishNowString ?></button>
-                            <button id="reset_button" class="reset_button small secondary radius button" disabled="disabled" onClick="<?php echo $revertAction ?>"><?php echo $resetFormString ?></button>
-                        </div>
-                    <?php
-                    endif;
-                    ?>
-                </div><!--close div.bd-->
-            </div><!-- entity_container close -->
-            </form>
-            <?php
-            if ($addNewSomethingId != '') :
-                ?>
-                <button class="small secondary radius button" disabled="disabled" id="<?php echo $addNewSomethingId; ?>" onClick="<?php echo $addNewSomethingAction; ?>"><?php echo $addNewSomethingDisplayText; ?></button>
-
-            <?php
-            endif;
-            echo $suffixingContent;
-            ?>
-        </div><!-- content_container close -->
-    <?php
-    } // end function
 }
 
 if (! function_exists('generatePickerMarkupAndScript')) {
@@ -252,7 +142,6 @@ if (! function_exists('generatePickerMarkupAndScript')) {
      * @param string $autoCompleteTabId
      * @param string $dialogDisplayingEventTriggerName
      * @param string $dataResponseType
-     * @param string $alternativeAutoCompleteRequestGenerator
      * @param string $alternativeAutoCompleteFilterer
      * @param string $alternativeAutoCompleteFormatter
      * @param int $maxResultsDisplay
@@ -287,7 +176,6 @@ if (! function_exists('generatePickerMarkupAndScript')) {
         $autoCompleteTabId,
         $dialogDisplayingEventTriggerName,
         $dataResponseType = 'YAHOO.util.XHRDataSource.TYPE_XML',
-        $alternativeAutoCompleteRequestGenerator = null,
         $alternativeAutoCompleteFilterer = null,
         $alternativeAutoCompleteFormatter = null,
         $maxResultsDisplay = 500,
@@ -384,34 +272,7 @@ if (! function_exists('generatePickerMarkupAndScript')) {
          * @see ilios.dom.buildDialogPanel
          */
         var <?php echo $uniquer; ?>submitMethod = function () {
-            <?php
-                if ($alternativeSubmitHandlerCode != null) :
-                    echo $alternativeSubmitHandlerCode;
-                else :
-            ?>
-            var textFieldContent = '';
-            var containerNumber = this.containerNumber; // 'this' should be the Dialog instance
-            var inputTextId = containerNumber + '_' + <?php echo $uniquer; ?>listingTextField;
-            var parentModel = <?php echo $parentModelGetterName; ?>(this);
-            var element = null;
-
-            parentModel.<?php echo $localModelSetterName; ?>(<?php echo $uniquer; ?>currentlySelectedModels);
-
-            textFieldContent = ilios.utilities.delimitedStringOfTitledObjects(
-                <?php echo $uniquer ?>currentlySelectedModels, ';');
-
-            element = document.getElementById(inputTextId + "_full");
-            if (element != null) {
-                element.innerHTML = textFieldContent;
-                element = document.getElementById(inputTextId);
-                element.innerHTML = ilios.lang.ellipsisedOfLength(textFieldContent, 75);
-            } else {
-                element = document.getElementById(inputTextId);
-                element.innerHTML = textFieldContent;
-            }
-            <?php
-                endif;
-            ?>
+            <?php echo $alternativeSubmitHandlerCode; ?>
         }; // end function
 
 
@@ -503,10 +364,6 @@ if (! function_exists('generatePickerMarkupAndScript')) {
                 remote_data: <?php echo $uniquer; ?>dataSource,
                 select_handler: <?php echo $uniquer; ?>handleSelect,
                 <?php
-                    if ($alternativeAutoCompleteRequestGenerator != null) :
-                        echo "request_generator: " . $alternativeAutoCompleteRequestGenerator . ",\n";
-                    endif;
-
                     if ($alternativeAutoCompleteFilterer != null) :
                         echo "filter_results_handler: " . $alternativeAutoCompleteFilterer . ",\n";
                     endif;

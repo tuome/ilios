@@ -106,7 +106,7 @@ ilios.cm.session.generateIdStringForSessionOfferingExpandWidget = function (cont
 
 ilios.cm.session.generateIdStringForSessionSupplementalRadio = function (containerNumber) {
     return '' + containerNumber + '_session_supplemental_radio';
-}
+};
 
 ilios.cm.session.generateIdStringForSessionTitle = function (containerNumber) {
     return '' + containerNumber + '_session_title';
@@ -120,7 +120,7 @@ ilios.cm.session.generateIdStringForSessionTypeSelector = function (containerNum
 ilios.cm.session.appendMeSHBlock = function (parentElement, containerNumber, labelString) {
     var clickFunction = function (e) {
         var sessionModel = ilios.cm.currentCourseModel.getSessionForContainer(containerNumber);
-        IEvent.fire({
+        ilios.ui.onIliosEvent.fire({
             action: 'mesh_picker_dialog_open',
             model_in_edit: sessionModel
         });
@@ -327,7 +327,7 @@ ilios.cm.session.sessionContentGenerator = function (parentElement, containerNum
     scratchInput.setAttribute('type', 'checkbox');
     scratchInput.setAttribute('name', 'independent_learning');
     scratchInput.setAttribute('id', ilios.cm.session.generateIdStringForSessionILMCheckbox(containerNumber));
-    Event.addListener(scratchInput, 'click', function () {
+    Event.addListener(scratchInput, 'change', function () {
         ilios.cm.session.sessionILMCheckboxSelected(this, containerNumber);
     });
     i18nStr = ilios_i18nVendor.getI18NString('course_management.session.independent_learning');
@@ -564,11 +564,11 @@ ilios.cm.session.sessionContentGenerator = function (parentElement, containerNum
     i18nStr = ilios_i18nVendor.getI18NString('general.terms.description');
     //label column
     scratchLabel= document.createElement('label');
-    scratchLabel.appendChild(document.createTextNode(i18nStr))
+    scratchLabel.appendChild(document.createTextNode(i18nStr));
     ilios.dom.createLabelCol(rowElement, scratchLabel);
     //data column
     scratchElement = document.createElement('div');
-    scratchElement.setAttribute('class', 'session_description')
+    scratchElement.setAttribute('class', 'session_description');
     scratchElementId = ilios.cm.session.generateIdStringForSessionDescription(containerNumber);
     scratchElement.setAttribute('id', scratchElementId);
     dataCol = ilios.dom.createDataCol(rowElement, scratchElement);
@@ -597,58 +597,52 @@ ilios.cm.session.sessionContentGenerator = function (parentElement, containerNum
     scratchElement = ilios.cm.session.appendMeSHBlock(parentElement, containerNumber, i18nStr);
     ilios.cm.uiElementsToHideOnLockedView.push(scratchElement);
 
-    //Learning Material
+    //Learning Materials
     rowElement = ilios.dom.createEntityContainerInputRow();
-    i18nStr = ilios_i18nVendor.getI18NString('course_management.learning_materials.title');
 
     //label column
     subContainer = document.createElement('div');
     subContainer.setAttribute('class', 'collapsed_widget');
-    subContainer.setAttribute('id', ilios.cm.lm.generateIdStringForLearningMaterialExpandWidget(containerNumber));
+    subContainer.setAttribute('id', ilios.cm.lm.generateIdStringForLearningMaterialsContainerExpandWidget(containerNumber));
     Event.addListener(subContainer, 'click', function () {
-        ilios.cm.lm.setLearningMaterialDivVisibility(containerNumber, this, true);
+        ilios.cm.lm.setlearningMaterialDivVisibility(containerNumber, this, true);
     });
     labelCol = ilios.dom.createLabelCol(rowElement, subContainer);
 
-    text = document.createTextNode(i18nStr);
     scratchLabel = document.createElement('label');
-    scratchLabel.appendChild(text);
-    count = document.createElement('span');
-    count.setAttribute('id', ilios.cm.lm.generateIdStringForLearningMaterialCount(containerNumber));
-    scratchLabel.appendChild(count);
+    scratchLabel.setAttribute('id', ilios.cm.lm.generateIdStringForLearningMaterialsContainerLabel(containerNumber));
+    scratchLabel.innerHTML = ilios_i18nVendor.getI18NString('general.terms.learning_materials') + ' (0)';
     labelCol.appendChild(scratchLabel);
 
     //data column
-    subContainer = document.createElement('div');
-    subContainer.setAttribute('class', 'scroll_list');
-    subContainer.setAttribute('style', 'display: none;');
-    subSubContainer = document.createElement('ul');
-    subSubContainer.setAttribute('class', 'learning_material_list');
-    subSubContainer.setAttribute('id', ilios.cm.lm.generateIdStringForLearningMaterialList(containerNumber));
-    subContainer.appendChild(subSubContainer);
-    dataCol = ilios.dom.createDataCol(rowElement, subContainer);
+    scratchContainer = document.createElement('div');
+    scratchContainer.setAttribute('id',
+        ilios.cm.lm.generateIdStringForLearningMaterialsContainer(containerNumber));
+    scratchContainer.setAttribute('style', 'display: none;');
+    dataCol = ilios.dom.createDataCol(rowElement, scratchContainer);
 
     //action column
-    i18nStr = ilios_i18nVendor.getI18NString('general.terms.add');
-    scratchInput = new Element(document.createElement('a'), {
-            href: '',
-            id : ilios.cm.lm.generateIdStringForLearningMaterialSearchLink(containerNumber)
-        });
-    scratchInput.get('element').setAttribute('onclick', 'return false;');
-    scratchInput.get('element').setAttribute('style', 'display: none;'); // not displayed by default
+    i18nStr = ilios_i18nVendor.getI18NString('general.phrases.add_learning_material_link');
+    scratchInput = new Element(document.createElement('a'), {href: ''});
     scratchInput.addClass('tiny radius button');
+    scratchInput.get('element').setAttribute('id', containerNumber + '_add_learning_material_button');
+    scratchInput.get('element').setAttribute('onclick', 'return false;');
     scratchInput.addListener('click', function (e) {
-        IEvent.fire({
-            action: 'alm_dialog_open',
-            container_number: containerNumber
-        });
+        ilios.cm.lm.addNewLearningMaterial(containerNumber);
     }, null, this);
     text = document.createTextNode(i18nStr);
     scratchInput.appendChild(text);
     ilios.cm.uiElementsToHideOnLockedView.push(scratchInput);
-    actionCol = ilios.dom.createActionCol(rowElement, scratchInput.get('element'));
+
+    ilios.dom.createActionCol(rowElement, scratchInput.get('element'));
 
     parentElement.appendChild(rowElement);
+
+
+
+
+
+
 
     //Objectives
     rowElement = ilios.dom.createEntityContainerInputRow();
@@ -740,7 +734,7 @@ ilios.cm.session.buildAndPopulateSession = function (containerNumber, model, ses
     var deselectIdString = null;
     var selectIdStringBase = null;
     var elementId = null;
-    var isLocked = isLocked || false;
+    isLocked = isLocked || false;
 
     formDOMElement.get('element').setAttribute('cnumber', containerNumber);
 
@@ -775,7 +769,7 @@ ilios.cm.session.buildAndPopulateSession = function (containerNumber, model, ses
         // register onclick event handler on edit button to bring up modal dialog
         Event.addListener(element, 'click', function (e) {
             Event.preventDefault(e);
-            IEvent.fire({
+            ilios.ui.onIliosEvent.fire({
                 action: 'esd_dialog_open',
                 model: sessionModel
             });
@@ -853,8 +847,7 @@ ilios.cm.session.buildAndPopulateSession = function (containerNumber, model, ses
     }
 
     ilios.cm.session.updatePublishButtonForSession(sessionModel, containerNumber);
-
-    ilios.cm.lm.populateLearningMaterialList(containerNumber);
+    ilios.cm.lm.populateLearningMaterialsContainer(containerNumber);
     // only display the learning materials search link if the corresponding session model has been saved yet
     if (-1 !== sessionModel.getDBId()) { // check db record id
         element = document.getElementById(ilios.cm.lm.generateIdStringForLearningMaterialSearchLink(containerNumber));
@@ -904,7 +897,7 @@ ilios.cm.session.removeSessionUIWithContainerNumber = function (containerNumber)
 };
 
 ilios.cm.session.setSessionsSummaryText = function () {
-    var sessionCount = ilios.utilities.arraySize(ilios.cm.currentCourseModel.getSessions());
+    var sessionCount = ilios.utilities.objectPropertyCount(ilios.cm.currentCourseModel.getSessions());
     var element = document.getElementById('sessions_summary');
     var i18nString
             = ilios_i18nVendor.getI18NString('course_management.notification.sessions_exist');
@@ -1030,7 +1023,7 @@ ilios.cm.session.alterSessionUIToReflectLockedState = function (session) {
 ilios.cm.session.reorderSessionDivs = function () {
     var element = document.getElementById('session_container');
     var children = element.childNodes;
-    var sortingArray = new Array();
+    var sortingArray = [];
     var divCount = children.length;
     var i = 0;
 
@@ -1052,32 +1045,23 @@ ilios.cm.session.sessionDivComparator = function (div1, div2) {
     var cn1 = div1.getAttribute('cnumber');
     var cn2 = div2.getAttribute('cnumber');
 
-/*
-    if (selectedIndex == 0) {
-        return parseInt(cn1) - parseInt(cn2);
-    } else {
-*/
-        var sm1 = ilios.cm.currentCourseModel.getSessionForContainer(cn1);
-        var sm2 = ilios.cm.currentCourseModel.getSessionForContainer(cn2);
-        var fe1 = null;
-        var fe2 = null;
+    var sm1 = ilios.cm.currentCourseModel.getSessionForContainer(cn1);
+    var sm2 = ilios.cm.currentCourseModel.getSessionForContainer(cn2);
+    var fe1 = null;
+    var fe2 = null;
 
-        switch (selectedIndex) {
-            case 0:
-                return sm1.getTitle().localeCompare(sm2.getTitle());
-            case 1:
-                return sm2.getTitle().localeCompare(sm1.getTitle());
-            case 2:
-                fe1 = sm1.getFirstEventStart();
-                fe2 = sm2.getFirstEventStart();
-                return fe1 - fe2;
-            case 3:
-                fe1 = sm1.getFirstEventStart();
-                fe2 = sm2.getFirstEventStart();
-                return fe2 - fe1;
-        }
-/*
+    switch (selectedIndex) {
+        case 0:
+            return sm1.getTitle().localeCompare(sm2.getTitle());
+        case 1:
+            return sm2.getTitle().localeCompare(sm1.getTitle());
+        case 2:
+            fe1 = sm1.getFirstEventStart();
+            fe2 = sm2.getFirstEventStart();
+            return fe1 - fe2;
+        case 3:
+            fe1 = sm1.getFirstEventStart();
+            fe2 = sm2.getFirstEventStart();
+            return fe2 - fe1;
     }
-    return 0;
-*/
 };

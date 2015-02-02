@@ -50,6 +50,10 @@ class Curriculum_Inventory_Manager extends Ilios_Web_Controller
             $this->load->model('Curriculum_Inventory_Export', 'invExport', true);
         }
 
+        if (! property_exists($this, 'invSequenceBlockSession')) {
+            $this->load->model('Curriculum_Inventory_Sequence_Block_Session', 'invSequenceBlockSession', true);
+        }
+
         if (! property_exists($this, 'program')) {
             $this->load->model('Program', 'program', true);
         }
@@ -69,8 +73,6 @@ class Curriculum_Inventory_Manager extends Ilios_Web_Controller
     public function index ()
     {
         $data = array();
-        $data['institution_name'] = $this->config->item('ilios_institution_name');
-        $data['user_id'] = $this->session->userdata('uid');
 
         // authorization check
         if (! $this->session->userdata('has_admin_access')) {
@@ -144,12 +146,8 @@ class Curriculum_Inventory_Manager extends Ilios_Web_Controller
      */
     public function create ()
     {
-        
-        $rhett = array();
 
-        $data = array();
-        $data['institution_name'] = $this->config->item('ilios_institution_name');
-        $data['user_id'] = $this->session->userdata('uid');
+        $rhett = array();
 
         // authorization check
         if (! $this->session->userdata('has_admin_access')) {
@@ -292,8 +290,6 @@ class Curriculum_Inventory_Manager extends Ilios_Web_Controller
     public function export ()
     {
         $data = array();
-        $data['institution_name'] = $this->config->item('ilios_institution_name');
-        $data['user_id'] = $this->session->userdata('uid');
 
         // authorization check
         if (! $this->session->userdata('has_admin_access')) {
@@ -398,8 +394,6 @@ class Curriculum_Inventory_Manager extends Ilios_Web_Controller
     public function download ()
     {
         $data = array();
-        $data['institution_name'] = $this->config->item('ilios_institution_name');
-        $data['user_id'] = $this->session->userdata('uid');
 
         // authorization check
         if (! $this->session->userdata('has_admin_access')) {
@@ -731,6 +725,11 @@ class Curriculum_Inventory_Manager extends Ilios_Web_Controller
         $blockId = $this->invSequenceBlock->create($reportId, $parentBlockId, $title, $description, $startDate,
             $endDate, $duration, $academicLevelId, $required, $maximum, $minimum, $track, $courseId, $childSequenceOrder,
             $orderInSequence);
+        if($this->input->post('count_offerings_once_sessions')){
+            foreach($this->input->post('count_offerings_once_sessions') AS $sessionId){
+                $this->invSequenceBlockSession->create($blockId, $sessionId, 1);
+            }
+        }
         $block = $this->invSequenceBlock->get($blockId);
         $this->db->trans_complete();
         if (false === $this->db->trans_status()) {
@@ -1011,6 +1010,12 @@ class Curriculum_Inventory_Manager extends Ilios_Web_Controller
             }
         }
         $this->invSequenceBlock->update($block->sequence_block_id, $data);
+        $this->invSequenceBlockSession->clearSessionsForBlock($blockId);
+        if($this->input->post('count_offerings_once_sessions')){
+            foreach($this->input->post('count_offerings_once_sessions') AS $sessionId){
+                $this->invSequenceBlockSession->create($blockId, $sessionId, 1);
+            }
+        }
         $block = $this->invSequenceBlock->get($blockId);
         $this->db->trans_complete();
         if (false === $this->db->trans_status()) {

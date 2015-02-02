@@ -112,11 +112,11 @@ OfferingModel.prototype.canPublish = function () {
         return false;
     }
 
-    if (ilios.utilities.arraySize(this.instructors) == 0) {
+    if (ilios.utilities.objectPropertyCount(this.instructors) == 0) {
         return false;
     }
 
-    if (ilios.utilities.arraySize(this.studentGroups) == 0) {
+    if (ilios.utilities.objectPropertyCount(this.studentGroups) == 0) {
         return false;
     }
 
@@ -279,7 +279,7 @@ OfferingModel.prototype.getInstructorsAsFormattedText = function () {
         }
 
         if (model instanceof UserModel) {
-            rhett += model.getFormattedName(ilios.utilities.USER_NAME_FORMAT_LAST_FIRST);
+            rhett += model.getFormattedName(ilios.utilities.UserNameFormatEnum.LAST_FIRST);
         }
         else {
             rhett += model.title;
@@ -311,7 +311,7 @@ OfferingModel.prototype.removeStudentGroup = function (studentGroup) {
 };
 
 OfferingModel.prototype.removeAllStudentGroups = function () {
-    if (ilios.utilities.arraySize(this.studentGroups) > 0) {
+    if (ilios.utilities.objectPropertyCount(this.studentGroups) > 0) {
         this.studentGroups = new Array();
 
         this.setDirtyAndNotify();
@@ -489,13 +489,13 @@ OfferingModel.prototype.compareTo = function (otherModel) {
         return 1;           // arbitrary but consistent
     }
 
-    if (ilios.utilities.arraySize(this.instructors)
-                            != ilios.utilities.arraySize(otherModel.instructors)) {
+    if (ilios.utilities.objectPropertyCount(this.instructors)
+                            != ilios.utilities.objectPropertyCount(otherModel.instructors)) {
         return 1;           // arbitrary but consistent
     }
 
-    if (ilios.utilities.arraySize(this.studentGroups)
-                            != ilios.utilities.arraySize(otherModel.studentGroups)) {
+    if (ilios.utilities.objectPropertyCount(this.studentGroups)
+                            != ilios.utilities.objectPropertyCount(otherModel.studentGroups)) {
         return 1;           // arbitrary but consistent
     }
 

@@ -42,6 +42,7 @@ function CourseModel (dbObject) {
     this.sessions = [];
 
     this.learningMaterials = [];
+    this.learningMaterialCount = 0;
 
     this.learners = [];
 
@@ -187,7 +188,7 @@ CourseModel.prototype.meetsMinimumPublishingRequirements = function (reviewArray
                                                             'general.terms.cohort_indefinite');
     }
 
-    value = ilios.utilities.arraySize(this.cohorts);
+    value = ilios.utilities.objectPropertyCount(this.cohorts);
     if (value == 0) {
         rhett = false;
 
@@ -266,7 +267,7 @@ CourseModel.prototype.meetsSecondaryPublishingRequirements = function (reviewArr
                                                             'general.terms.objective_indefinite');
     }
 
-    value = ilios.utilities.arraySize(this.objectives);
+    value = ilios.utilities.objectPropertyCount(this.objectives);
     if (value == 0) {
         rhett = false;
 
@@ -295,7 +296,7 @@ CourseModel.prototype.meetsSecondaryPublishingRequirements = function (reviewArr
                                                             'general.phrases.mesh_term_indefinite');
     }
 
-    value = ilios.utilities.arraySize(this.meshTerms);
+    value = ilios.utilities.objectPropertyCount(this.meshTerms);
     if (value == 0) {
         rhett = false;
 
@@ -475,6 +476,11 @@ CourseModel.prototype.getLearningMaterialForId = function (learningMaterialId) {
 
 CourseModel.prototype.containsLearningMaterial = function (learningMaterialModel) {
     return (this.getLearningMaterialForId(learningMaterialModel.getDBId()) != null);
+};
+
+//Returns the next learning material number
+CourseModel.prototype.getNextLearningMaterialNumber = function () {
+    return this.learningMaterials.length;
 };
 
 CourseModel.prototype.removeLearningMaterial = function (learningMaterialModel) {
@@ -732,14 +738,20 @@ CourseModel.prototype.addObjectiveForContainer = function (objectiveModel, conta
     this.setDirtyAndNotify();
 };
 
-CourseModel.prototype.removeObjectiveForContainer = function (containerNumber) {
-    var lovelyJavascript = (containerNumber in this.objectives);
+CourseModel.prototype.removeObjectiveForContainer = function (objectiveNumber) {
+    var lovelyJavascript = (objectiveNumber in this.objectives);
 
     if (lovelyJavascript) {
-        delete this.objectives[containerNumber];
+        delete this.objectives[objectiveNumber];
 
         this.setDirtyAndNotify();
     }
+
+    // TODO: OMFG why isn't this just this?
+    // if (this.objectives[containerNumber]) {
+    //     this.objectives.splice(containerNumber, 1);
+    //     this.setDirtyAndNotify();
+    // }
 };
 
 /**
@@ -835,7 +847,7 @@ CourseModel.prototype.getDirectorsAsFormattedText = function () {
             rhett += '; ';
         }
 
-        rhett += this.directors[key].getFormattedName(ilios.utilities.USER_NAME_FORMAT_LAST_FIRST);
+        rhett += this.directors[key].getFormattedName(ilios.utilities.UserNameFormatEnum.LAST_FIRST);
     }
 
     return rhett;
@@ -928,7 +940,7 @@ CourseModel.prototype.clone = function () {
     }
 
     rhett.objectiveCount = this.objectiveCount;
-    rhett.objectives = ilios.utilities.deepCloneAssociativeArray(this.objectives);
+    rhett.objectives = this.objectives.slice(0);
 
     // (should still be clean.. but just in case future coders accidentally add code that dirties
     //      above..)
@@ -988,8 +1000,8 @@ CourseModel.prototype.compareTo = function (otherModel) {
         return (this.courseLevel - otherModel.courseLevel);
     }
 
-    if (ilios.utilities.arraySize(this.directors)
-                                            != ilios.utilities.arraySize(otherModel.directors)) {
+    if (ilios.utilities.objectPropertyCount(this.directors)
+                                            != ilios.utilities.objectPropertyCount(otherModel.directors)) {
         return 1;           // arbitrary but consistent
     }
 
@@ -1008,12 +1020,12 @@ CourseModel.prototype.compareTo = function (otherModel) {
         }
     }
 
-    if (ilios.utilities.arraySize(this.competencies)
-                            != ilios.utilities.arraySize(otherModel.competencies)) {
+    if (ilios.utilities.objectPropertyCount(this.competencies)
+                            != ilios.utilities.objectPropertyCount(otherModel.competencies)) {
         return 1;           // arbitrary but consistent
     }
 
-    if (ilios.utilities.arraySize(this.cohorts) != ilios.utilities.arraySize(otherModel.cohorts)) {
+    if (ilios.utilities.objectPropertyCount(this.cohorts) != ilios.utilities.objectPropertyCount(otherModel.cohorts)) {
         return 1;           // arbitrary but consistent
     }
 
@@ -1021,18 +1033,18 @@ CourseModel.prototype.compareTo = function (otherModel) {
         return 1;           // arbitrary but consistent
     }
 
-    if (ilios.utilities.arraySize(this.meshTerms)
-                            != ilios.utilities.arraySize(otherModel.meshTerms)) {
+    if (ilios.utilities.objectPropertyCount(this.meshTerms)
+                            != ilios.utilities.objectPropertyCount(otherModel.meshTerms)) {
         return 1;           // arbitrary but consistent
     }
 
-    if (ilios.utilities.arraySize(this.sessions)
-                            != ilios.utilities.arraySize(otherModel.sessions)) {
+    if (ilios.utilities.objectPropertyCount(this.sessions)
+                            != ilios.utilities.objectPropertyCount(otherModel.sessions)) {
         return 1;           // arbitrary but consistent
     }
 
-    if (ilios.utilities.arraySize(this.objectives)
-                            != ilios.utilities.arraySize(otherModel.objectives)) {
+    if (ilios.utilities.objectPropertyCount(this.objectives)
+                            != ilios.utilities.objectPropertyCount(otherModel.objectives)) {
         return 1;           // arbitrary but consistent
     }
 

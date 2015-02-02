@@ -10,6 +10,11 @@ require_once 'ilios_web_controller.php';
 class Learning_Materials extends Ilios_Web_Controller
 {
     /**
+     * @var Ilios_FileUtils
+     */
+    protected $_fileUtils;
+
+    /**
      * Constructor
      */
     public function __construct ()
@@ -17,6 +22,8 @@ class Learning_Materials extends Ilios_Web_Controller
         parent::__construct();
         $this->load->model('Alert', 'alert', TRUE);
         $this->load->model('School', 'school', TRUE);
+
+        $this->_fileUtils = new Ilios_FileUtils();
     }
 
     /**
@@ -28,7 +35,7 @@ class Learning_Materials extends Ilios_Web_Controller
     }
 
     /**
-     * Expected params:
+     * Expected GET params:
      *      . learning_material_id
      *
      * @return a stream with the appropriate content type set
@@ -38,7 +45,7 @@ class Learning_Materials extends Ilios_Web_Controller
         $rhett = array();
 
         // not extra authorization check here, learning materials are readable by all logged in users.
-        $learningMaterialId = $this->input->get_post('learning_material_id');
+        $learningMaterialId = $this->input->get('learning_material_id');
         $rhett = $this->learningMaterial->getAssetPathAndFilenameAndType($learningMaterialId);
 
         //we have the filepath at this point ($rhett[2]), so let's make sure it's there...
@@ -46,7 +53,7 @@ class Learning_Materials extends Ilios_Web_Controller
           //if the file exists, start streaming!
           header("Content-Type: " . $rhett[0]);
           header('Content-Disposition: attachment; filename="' . $rhett[1] . '"');
-          $this->streamFileContentsChunked($rhett[2], false);
+          $this->_fileUtils->streamFileContentsChunked($rhett[2]);
         } else {
           //otherwise, the file isn't where is should be, so throw a 404 with the filename ($rhett[1])
           show_error("Learning Material '" . $rhett[1] . "' was not found.", 404);
@@ -54,7 +61,7 @@ class Learning_Materials extends Ilios_Web_Controller
     }
 
     /**
-     * Expected params:
+     * Expected POST params:
      *      . learning_material_id
      *      . status_id
      *
@@ -73,8 +80,8 @@ class Learning_Materials extends Ilios_Web_Controller
 
         $userId = $this->session->userdata('uid');
 
-        $learningMaterialId = $this->input->get_post('learning_material_id');
-        $statusId = $this->input->get_post('status_id');
+        $learningMaterialId = $this->input->post('learning_material_id');
+        $statusId = $this->input->post('status_id');
 
         $rhett['learning_material_id'] = $learningMaterialId;
 
@@ -97,12 +104,12 @@ class Learning_Materials extends Ilios_Web_Controller
                 $this->learningMaterial->commitTransaction();
 
                 // save audit trail
-                $this->auditEvent->startTransaction();
-                $success = $this->auditEvent->saveAuditEvent($auditAtoms, $userId);
-                if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                    $this->auditEvent->rollbackTransaction();
+                $this->auditAtom->startTransaction();
+                $success = $this->auditAtom->saveAuditEvent($auditAtoms, $userId);
+                if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                    $this->auditAtom->rollbackTransaction();
                 } else {
-                    $this->auditEvent->commitTransaction();
+                    $this->auditAtom->commitTransaction();
                 }
             }
             else {
@@ -119,7 +126,7 @@ class Learning_Materials extends Ilios_Web_Controller
     }
 
     /**
-     * Expected params:
+     * Expected POST params:
      *      . search_string
      *
      * @return a JSON'd array of 0 or more models; each model will contain 'learning_material_id',
@@ -138,7 +145,7 @@ class Learning_Materials extends Ilios_Web_Controller
             return;
         }
 
-        $searchString = $this->input->get_post('search_string');
+        $searchString = $this->input->post('search_string');
         if ('' !== trim($searchString)) {
             $rhett = $this->learningMaterial->getLearningMaterialsMatchingString($searchString);
         }
@@ -149,7 +156,7 @@ class Learning_Materials extends Ilios_Web_Controller
 
     /**
      * Associates learning materials with a session or course, based on posted user input.
-     * Expected params:
+     * Expected POST params:
      *      . session_id or course_id
      *      . learning_material_id
      *
@@ -167,9 +174,9 @@ class Learning_Materials extends Ilios_Web_Controller
             return;
         }
 
-        $learningMaterialId = $this->input->get_post('learning_material_id');
-        $sessionId = $this->input->get_post('session_id');
-        $courseId = $this->input->get_post('course_id');
+        $learningMaterialId = $this->input->post('learning_material_id');
+        $sessionId = $this->input->post('session_id');
+        $courseId = $this->input->post('course_id');
 
 
         $school = false;
@@ -222,17 +229,17 @@ class Learning_Materials extends Ilios_Web_Controller
                 $this->learningMaterial->commitTransaction();
 
                 // save audit trail
-                $this->auditEvent->startTransaction();
-                $success = $this->auditEvent->saveAuditEvent($auditAtoms, $userId);
-                if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                    $this->auditEvent->rollbackTransaction();
+                $this->auditAtom->startTransaction();
+                $success = $this->auditAtom->saveAuditEvent($auditAtoms, $userId);
+                if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                    $this->auditAtom->rollbackTransaction();
                 } else {
-                    $this->auditEvent->commitTransaction();
+                    $this->auditAtom->commitTransaction();
                 }
 
                 // save change alerts
                 $alertChangeTypes = array(Alert::CHANGE_TYPE_LEARNING_MATERIAL);
-                $this->auditEvent->startTransaction();
+                $this->auditAtom->startTransaction();
                 $success = false;
                 if (! $sessionId) {
                     if ($this->course->isPublished($courseId)) {
@@ -248,10 +255,10 @@ class Learning_Materials extends Ilios_Web_Controller
                 } else {
                     $success = $this->_alertAllOfferingsAsAppropriate($sessionId, $sessionId, 'session', $alertChangeTypes, $school);
                 }
-                if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                    $this->auditEvent->rollbackTransaction();
+                if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                    $this->auditAtom->rollbackTransaction();
                 } else {
-                    $this->auditEvent->commitTransaction();
+                    $this->auditAtom->commitTransaction();
                 }
             }
         } while ($failedTransaction && ($transactionRetryCount > 0));
@@ -261,7 +268,7 @@ class Learning_Materials extends Ilios_Web_Controller
     }
 
     /**
-     * Expected params:
+     * Expected POST params:
      *      . session_id or course_id
      *      . learning_material_id
      *
@@ -280,9 +287,9 @@ class Learning_Materials extends Ilios_Web_Controller
 
         $userId = $this->session->userdata('uid');
 
-        $learningMaterialId = $this->input->get_post('learning_material_id');
-        $sessionId = $this->input->get_post('session_id');
-        $courseId = $this->input->get_post('course_id');
+        $learningMaterialId = $this->input->post('learning_material_id');
+        $sessionId = $this->input->post('session_id');
+        $courseId = $this->input->post('course_id');
 
 
         $school = false;
@@ -337,17 +344,17 @@ class Learning_Materials extends Ilios_Web_Controller
                 $this->learningMaterial->commitTransaction();
 
                 // save audit trail
-                $this->auditEvent->startTransaction();
-                $success = $this->auditEvent->saveAuditEvent($auditAtoms, $userId);
-                if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                    $this->auditEvent->rollbackTransaction();
+                $this->auditAtom->startTransaction();
+                $success = $this->auditAtom->saveAuditEvent($auditAtoms, $userId);
+                if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                    $this->auditAtom->rollbackTransaction();
                 } else {
-                    $this->auditEvent->commitTransaction();
+                    $this->auditAtom->commitTransaction();
                 }
 
                 // save change alerts
                 $alertChangeTypes = array(Alert::CHANGE_TYPE_LEARNING_MATERIAL);
-                $this->auditEvent->startTransaction();
+                $this->auditAtom->startTransaction();
                 $success = false;
                 if (! $sessionId) {
                     if ($this->course->isPublished($courseId)) {
@@ -366,10 +373,10 @@ class Learning_Materials extends Ilios_Web_Controller
                     $success = $this->_alertAllOfferingsAsAppropriate($sessionId, $sessionId, 'session',
                             $alertChangeTypes, $school);
                 }
-                if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                    $this->auditEvent->rollbackTransaction();
+                if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                    $this->auditAtom->rollbackTransaction();
                 } else {
-                    $this->auditEvent->commitTransaction();
+                    $this->auditAtom->commitTransaction();
                 }
             }
         }
@@ -444,7 +451,7 @@ class Learning_Materials extends Ilios_Web_Controller
         $filename = null;
         $copyrightRationale = null;
 
-        $displayedTab = $this->input->get_post('displayed_tab');
+        $displayedTab = $this->input->post('displayed_tab');
 
         if (($displayedTab == 1) && (! $this->upload->do_upload())) {
             $msg = $this->languagemap->getI18NString('general.error.upload_fail');
@@ -468,6 +475,7 @@ class Learning_Materials extends Ilios_Web_Controller
             $creator = $clean['content_creator'];
             $ownerRoleId = $this->input->post('owner_role');
             $statusId = $this->input->post('status');
+            $token = Ilios_PasswordUtils::generateToken();
 
             switch ($displayedTab) {
                 case 1:
@@ -522,21 +530,21 @@ class Learning_Materials extends Ilios_Web_Controller
                             $newLearningMaterialId = $this->learningMaterial->storeFileUploadLearningMaterialMeta(
                                 $title, $mimeType, $uploadFilePath, $filename, $filesize, $haveCopyrightOwnership,
                                 $copyrightRationale, $description, $statusId, $creator, $ownerRoleId, $courseId,
-                                $sessionId, $userId, $auditAtoms);
+                                $sessionId, $userId, $token, $auditAtoms);
                             break;
                         case 2:
-                            $link = $this->input->get_post('web_link');
+                            $link = $this->input->post('web_link');
 
                             $newLearningMaterialId = $this->learningMaterial->storeLinkLearningMaterialMeta(
                                 $title, $link, $description, $statusId, $creator, $ownerRoleId, $courseId,
-                                $sessionId, $userId, $auditAtoms);
+                                $sessionId, $userId, $token, $auditAtoms);
                             $rhett['web_link'] = $link;
                             break;
                         case 3:
-                            $citation = $this->input->get_post('citation');
+                            $citation = $this->input->post('citation');
                             $newLearningMaterialId = $this->learningMaterial->storeCitationLearningMaterialMeta(
                                 $title, $citation, $description, $statusId, $creator, $ownerRoleId, $courseId,
-                                $sessionId, $userId, $auditAtoms);
+                                $sessionId, $userId, $token, $auditAtoms);
                             $rhett['citation'] = $citation;
                             break;
                         default:
@@ -552,12 +560,12 @@ class Learning_Materials extends Ilios_Web_Controller
                         $this->learningMaterial->commitTransaction();
 
                         // save audit trail
-                        $this->auditEvent->startTransaction();
-                        $success = $this->auditEvent->saveAuditEvent($auditAtoms, $userId);
-                        if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                            $this->auditEvent->rollbackTransaction();
+                        $this->auditAtom->startTransaction();
+                        $success = $this->auditAtom->saveAuditEvent($auditAtoms, $userId);
+                        if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                            $this->auditAtom->rollbackTransaction();
                         } else {
-                            $this->auditEvent->commitTransaction();
+                            $this->auditAtom->commitTransaction();
                         }
 
                         $rhett['learning_material_id'] = $newLearningMaterialId;
@@ -634,4 +642,93 @@ class Learning_Materials extends Ilios_Web_Controller
 
         return $rhett;
     }
+
+    /**
+     * XHR handler for updating learning materials and all their associations and mesh terms
+     *
+     * Expected POST params:
+     *      course_id
+     *      is_course
+     *      lmDbId
+     *      learning_materials
+     *
+     * Prints a JSON'd array with key 'error' or the following keys
+     *
+     * 'publish_event_id' : the unique id of the publish event
+     * 'cnumber' : the container number that contains the newly-saved learning material for updating the DOM
+     * 'lmnumber': the learning material dbID
+     * 'meshTotal' : the total number of mesh terms associated with the learning material
+     */
+
+    public function updateLearningMaterial ()
+    {
+        $rhett = array();
+
+        // authorization check
+        if (! $this->session->userdata('has_instructor_access')) {
+            $this->_printAuthorizationFailedXhrResponse();
+            return;
+        }
+
+        //get the userId for the audit trail
+        $userId = $this->session->userdata('uid');
+
+        // input processing
+        //get the id of the course or session
+        $courseOrSessionId = $this->input->post('course_id');
+        $isCourse = ($this->input->post('is_course') == 'true') ? true : false;
+        $containerNumber = $this->input->post('container_number');
+        $lmNumber = $this->input->post('lmnumber');
+
+        try {
+            $learningMaterials = Ilios_Json::deserializeJsonArray($this->input->post('learning_materials'), true);
+        } catch (Ilios_Exception $e) {
+            $this->_printErrorXhrResponse('course_management.error.course_save.input_validation.learning_materials');
+            return;
+        }
+
+        $failedTransaction = true;
+        $transactionRetryCount = Ilios_Database_Constants::TRANSACTION_RETRY_COUNT;
+        do {
+            $auditAtoms = array();
+
+            unset($rhett['error']);
+            $publishId = -1;
+
+            $this->learningMaterial->startTransaction();
+
+            $results = $this->learningMaterial->updateLearningMaterial($courseOrSessionId, $lmNumber, $isCourse,
+                $learningMaterials, $auditAtoms);
+
+            if (isset($results['error']) || $this->learningMaterial->transactionAtomFailed()) {
+                $rhett['error'] = $results['error'];
+                Ilios_Database_TransactionHelper::failTransaction($transactionRetryCount, $failedTransaction, $this->learningMaterial);
+            } else {
+                $rhett['publish_event_id'] = $publishId;
+
+                //send back the container number and lm number for easily updating the mesh count
+                $rhett['cnumber'] = $containerNumber;
+                $rhett['lmnumber'] = $lmNumber;
+                //get the total mesh count from the results
+                $rhett['meshTotal'] = $results['meshTotal'];
+
+                $failedTransaction = false;
+
+                $this->learningMaterial->commitTransaction();
+
+                // save audit trail
+                $this->auditAtom->startTransaction();
+                $success = $this->auditAtom->saveAuditEvent($auditAtoms, $userId);
+                if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                    $this->auditAtom->rollbackTransaction();
+                } else {
+                    $this->auditAtom->commitTransaction();
+                }
+            }
+        } while ($failedTransaction && ($transactionRetryCount > 0));
+
+        header("Content-Type: text/plain");
+        echo json_encode($rhett);
+    }
+
 }

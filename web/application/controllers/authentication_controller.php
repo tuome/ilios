@@ -28,7 +28,7 @@ class Authentication_Controller extends Ilios_Base_Controller
         $this->load->library('session');
 
         $this->load->model('Authentication', 'authentication', true);
-        $this->load->model('User', 'user', TRUE);
+        $this->load->model('User', 'user', true);
 
         // set the authentication subsystem to use
         $authn = $this->config->item('ilios_authentication');
@@ -99,7 +99,7 @@ class Authentication_Controller extends Ilios_Base_Controller
      *
      * This method will print out the login page.
      *
-     * Accepts the following POST parameters:
+     * Accepts the following GET parameters:
      *     'logout' ... if the value is 'yes' then the current user session will be terminated before the login page is printed.
      *
      * @see Authentication_Controller::index()
@@ -107,17 +107,10 @@ class Authentication_Controller extends Ilios_Base_Controller
      */
     protected function _default_index ()
     {
-        $logout = $this->input->get_post('logout');
-
+        $logout = $this->input->get('logout');
         $username = $this->session->userdata('username');
 
         $data['login_message'] = $this->languagemap->getI18NString('login.default_status');
-        $data['login_title'] = $this->languagemap->getI18NString('login.title');
-        $data['word_login'] = $this->languagemap->getI18NString('general.terms.login');
-        $data['word_password'] = $this->languagemap->getI18NString('general.terms.password');
-        $data['word_username'] = $this->languagemap->getI18NString('general.terms.username');
-        $data['last_url'] = '';
-        $data['param_string'] = '';
 
         if(! $username) { // not logged in
              $this->load->view('login/login', $data);
@@ -152,62 +145,45 @@ class Authentication_Controller extends Ilios_Base_Controller
      *     'username' ... the user account login handle
      *     'password' ... the  corresponding password in plain text
      *
-     * Prints out an result-array as JSON-formatted text.
-     * On success, the result-array will contain a success message, keyed off by "success".
-     * On failure, the result-array will contain an error message, keyed off by "error".
+     * On successful login, the user will be redirected to the dashboard.
+     * On login failure, the user will be thrown back onto the login screen.
      *
      * @see Authentication_Controller::login()
+     * @todo Add proper input validation. [ST 2013/12/23]
+     * @todo Add CSRF token to login form. [ST 2013/12/23]
      */
     protected function _default_login ()
     {
-        $rhett = array();
-
-        $username = $this->input->get_post('username');
-
-        $password = $this->input->get_post('password');
+        $username = $this->input->post('username');
+        $password = $this->input->post('password');
 
         $salt = $this->config->item('ilios_authentication_internal_auth_salt');
 
         $authenticationRow = $this->authentication->getByUsername($username);
 
-        $user = false;
+        $user = array();
 
         if ($authenticationRow) {
             if ('' !== trim($authenticationRow->password_sha256) // ensure that we have a password on file
                 && $authenticationRow->password_sha256 === Ilios_PasswordUtils::hashPassword($password, $salt)) { // password comparison
 
                 // load the user record
-                $user = $this->user->getEnabledUsersById($authenticationRow->person_id);
+                $user = $this->user->getEnabledUserById($authenticationRow->person_id);
             }
         }
 
-        if ($user) { // authentication succeeded. log the user in.
-
-            $now = time();
-
-            $sessionData = array(
-                'uid' => $user['user_id'],
-                'username' => $user['email'],
-                'is_learner' => $this->user->userIsLearner($user['user_id']),
-                'has_instructor_access' => $this->user->userHasInstructorAccess($user['user_id']),
-                'has_admin_access' => $this->user->userHasAdminAccess($user['user_id']),
-                'primary_school_id' => $user['primary_school_id'],
-                'school_id' => $user['primary_school_id'],
-                'login' => $now,
-                'last' => $now,
-                'display_fullname' => $user['first_name'] . ' ' . $user['last_name'],
-                'display_last' => date('F j, Y G:i T', $now)
-            );
-
-            $this->session->set_userdata($sessionData);
-            $rhett['success'] = 'huzzah';
-        } else { // login failed
-            $msg = $this->languagemap->getI18NString('login.error.bad_login');
-            $rhett['error'] = $msg;
+        // authentication succeeded. log the user in, then redirect to the dashboard.
+        if (! empty($user)) {
+            $this->_storeUserInSession($user);
+            $this->output->set_header("Location: " . base_url() . "ilios.php/dashboard_controller");
+            return;
         }
 
-        header("Content-Type: text/plain");
-        echo json_encode($rhett);
+        // handle login error
+        $this->output->set_header('Expires: 0');
+        $this->load->view('login/login', array(
+            'login_message' => $this->languagemap->getI18NString('login.error.bad_login'))
+        );
     }
 
     /**
@@ -229,33 +205,57 @@ class Authentication_Controller extends Ilios_Base_Controller
      */
     protected function _shibboleth_index ()
     {
-        $logout = $this->input->get_post('logout');
+        $logout = $this->input->get('logout');
 
         $data = array();
 
         if ($logout == 'yes') {
             $this->_shibboleth_logout();
-            $data['logout_in_progress'] = $this->languagemap->getI18NString('logout.logout_in_progress');
-            $this->load->view('login/logout', $data);
-        } else {
-            $emailAddress = "illegal_em4!l_addr3ss";
-            $shibbUserIdAttribute = $this->config->item('ilios_authentication_shibboleth_user_id_attribute');
-            $shibUserId = array_key_exists($shibbUserIdAttribute, $_SERVER) ? $_SERVER[$shibbUserIdAttribute] : null; // passed in by Shibboleth
-            if (! empty($shibUserId)) {
-                $emailAddress = $shibUserId;
+            return;
+        }
+
+        $shibbUserIdAttribute = $this->config->item('ilios_authentication_shibboleth_user_id_attribute');
+        $authFieldToMatch = $this->config->item('ilios_authentication_field_to_match');
+        $shibUserId = array_key_exists($shibbUserIdAttribute, $_SERVER) ? $_SERVER[$shibbUserIdAttribute] : null; // passed in by Shibboleth
+        if (! empty($shibUserId)) {
+            $identifier = '';
+            $authenticatedUsers = array();
+            switch($authFieldToMatch) {
+                case 'uc_uid':
+                    $identifier = trim($shibUserId);
+                    $authenticatedUsers = $this->user->getEnabledUsersWithInstitutionId($identifier);
+                    break;
+                case 'email':
+                default:
+                    /**
+                     * Some schools release the 'mail' attribute twice, urn:mace:dir:attribute-def:mail (SAML1) AND
+                     * urn:oid:0.9.2342.19200300.100.1.3 (SAML2), as one string of two email addresses separated by a semi-
+                     * colon.  They should always be the same value so, to account for this, explode the returned value on the
+                     * semicolon and just use the first one...
+                     */
+                    $mailAttributes = explode(';',$shibUserId);
+                    $identifier = $mailAttributes[0];
+                    $authenticatedUsers = $this->user->getEnabledUsersWithEmailAddress($identifier);
+                    break;
             }
-
-
-            $authenticatedUsers = $this->user->getEnabledUsersWithEmailAddress($emailAddress);
             $userCount = count($authenticatedUsers);
 
             if ($userCount == 0) {
-                $data['forbidden_warning_text']  = $this->languagemap->getI18NString('login.error.no_match_1')
-                    . ' (' . $emailAddress . ') ' . $this->languagemap->getI18NString('login.error.no_match_2');
+                switch($authFieldToMatch) {
+                    case 'uc_uid':
+                        $data['forbidden_warning_text']  = $this->languagemap->getI18NString('login.error.uid_no_match_1');
+                        break;
+                    case 'email':
+                    default:
+                        $data['forbidden_warning_text']  = $this->languagemap->getI18NString('login.error.email_no_match_1');
+                }
+                $data['forbidden_warning_text'] .= ' (' . $identifier . ') ';
+                $data['forbidden_warning_text'] .= $this->languagemap->getI18NString('login.error.no_match_2');
                 $this->load->view('common/forbidden', $data);
+
             } else if ($userCount > 1) {
-                $data['forbidden_warning_text'] = $this->languagemap->getI18NString('login.error.multiple_match')
-                    . ' (' . $emailAddress . ' [' . $userCount . '])';
+                $data['forbidden_warning_text'] = $this->languagemap->getI18NString('login.error.multiple_match');
+                $data['forbidden_warning_text'] .= ' (' . $identifier . ') [' . $userCount . ']';
                 $this->load->view('common/forbidden', $data);
             } else {
                 $user = $authenticatedUsers[0];
@@ -263,22 +263,7 @@ class Authentication_Controller extends Ilios_Base_Controller
                     $data['forbidden_warning_text'] = $this->languagemap->getI18NString('login.error.disabled_account');
                     $this->load->view('common/forbidden', $data);
                 } else {
-                    $now = time();
-                    $sessionData = array(
-                        'uid' => $user['user_id'],
-                        'username' => $emailAddress,
-                        'is_learner' => $this->user->userIsLearner($user['user_id']),
-                        'has_instructor_access' => $this->user->userHasInstructorAccess($user['user_id']),
-                        'has_admin_access' => $this->user->userHasAdminAccess($user['user_id']),
-                        'primary_school_id' => $user['primary_school_id'],
-                        'school_id' => $user['primary_school_id'],
-                        'login' => $now,
-                        'last' => $now,
-                        'display_fullname' => $user['first_name'] . ' ' . $user['last_name'],
-                        'display_last' => date('F j, Y G:i T', $now)
-                    );
-                    $this->session->set_userdata($sessionData);
-                    $this->session->set_flashdata('logged_in', 'jo');
+                    $this->_storeUserInSession($user);
                     if ($this->session->userdata('last_url')) {
                         $this->output->set_header("Location: " . $this->session->userdata('last_url'));
                         $this->session->unset_userdata('last_url');
@@ -287,19 +272,29 @@ class Authentication_Controller extends Ilios_Base_Controller
                     }
                 }
             }
+        } else {
+          //no id in shib session
+          $data['forbidden_warning_text'] = $this->languagemap->getI18NString('login.error.missing_id');
+          $this->load->view('common/forbidden', $data);
         }
     }
 
     /**
      * Implements the "logout" action for the shibboleth authentication system.
      *
-     * This method destroys the current user-session.
+     * This method destroys the current user-session and redirects the user
+     * to the external logout URL.
      *
      * @see Authentication_Controller::logout()
      */
     protected function _shibboleth_logout ()
     {
+        $redirect = $this->config->item("ilios_authentication_shibboleth_logout_path");
+        if (! $redirect) {
+            $redirect = '/Shibboleth.sso/Logout';
+        }
         $this->session->sess_destroy();
+        $this->output->set_header("Location: " . $redirect);
     }
 
     /**
@@ -318,17 +313,26 @@ class Authentication_Controller extends Ilios_Base_Controller
 
     /**
      * Implements the "login" action for the ldap authn system.
+
+     * Accepts the following POST parameters:
+     *     'username' ... the user account login handle
+     *     'password' ... the  corresponding password in plain text
+     *
+     * @todo Add CSRF token to login form. [ST 2013/12/23]
      */
     public function _ldap_login ()
     {
-        $rhett = array();
+        $errorMessages = array();
 
         // get login credentials from user input
-        $username = $this->input->get_post('username');
-        $password = $this->input->get_post('password');
+        $username = $this->input->post('username');
+        $password = $this->input->post('password');
 
-        $authenticated = false;
+        if (empty($username)) {
+            $errorMessages[] = $this->languagemap->getI18NString('login.error.username_missing');
+        }
 
+<<<<<<< HEAD
         // do LDAP authentication
         // by connecting and binding to the given ldap server with the user-provided credentials
         $ldapConf = $this->config->item('ilios_ldap_authentication');
@@ -346,48 +350,60 @@ class Authentication_Controller extends Ilios_Base_Controller
         } else {
             die('couldnt connect to ldap server');
             // @todo log connectivity failure
+=======
+        if (empty($password)) {
+            $errorMessages[] = $this->languagemap->getI18NString('login.error.password_missing');
+>>>>>>> 30763673423f9712c2295eb60daf8c21ae99dd55
         }
 
-        if ($authenticated) { // login succeeded
-            // get the user record from the database
-            $authenticationRow = $this->authentication->getByUsername($username);
-            $user = false;
-            if ($authenticationRow) {
-                // load the user record
-                $user = $this->user->getEnabledUsersById($authenticationRow->person_id);
-            }
+        $authenticated = false;
 
-            if ($user) {
-                $now = time();
-
-                $sessionData = array(
-                    'uid' => $user['user_id'],
-                    'username' => $user['email'],
-                    'is_learner' => $this->user->userIsLearner($user['user_id']),
-                    'has_instructor_access' => $this->user->userHasInstructorAccess($user['user_id']),
-                    'has_admin_access' => $this->user->userHasAdminAccess($user['user_id']),
-                    'primary_school_id' => $user['primary_school_id'],
-                    'school_id' => $user['primary_school_id'],
-                    'login' => $now,
-                    'last' => $now,
-                    'display_fullname' => $user['first_name'] . ' ' . $user['last_name'],
-                    'display_last' => date('F j, Y G:i T', $now)
-                );
-
-                $this->session->set_userdata($sessionData);
-                $rhett['success'] = 'huzzah';
+        if(!empty($username) and !empty($password)){
+            // do LDAP authentication
+            // by connecting and binding to the given ldap server with the user-provided credentials
+            $ldapConf = $this->config->item('ilios_ldap_authentication');
+            $ldapConn = @ldap_connect($ldapConf['host'], $ldapConf['port']);
+            if ($ldapConn) {
+                $ldapRdn = sprintf($ldapConf['bind_dn_template'], $username);
+                $ldapBind = @ldap_bind($ldapConn, $ldapRdn, $password);
+                if ($ldapBind) {
+                    $authenticated = true; // auth. successful
+                }
             } else {
-                //  login was success but we don't have a corresponding user record on file
-                // or the user is disabled
-                $rhett['error']  = 'Your username does not match any active user records in Ilios. If you need further assistance, please contact your Ilios administrator. Thank you.';
+                $errorMessages[] = $this->languagemap->getI18NString('login.error.provider_error');
             }
-        } else { // login failed
-            $msg = $this->i18nVendor->getI18NString('login.error.bad_login');
-            $rhett['error'] = $msg;
+            $user = false;
+            if ($authenticated) { // login succeeded
+                // get the user record from the database
+                $authenticationRow = $this->authentication->getByUsername($username);
+                if ($authenticationRow) {
+                    // load the user record
+                    $user = $this->user->getEnabledUserById($authenticationRow->person_id);
+                }
+
+                if ($user) {
+                    $this->_storeUserInSession($user);
+                } else {
+                    //  login was success but we don't have a corresponding user record on file
+                    // or the user is disabled
+                    $errorMessages[] = $username . ' ' . $this->languagemap->getI18NString('login.error.no_match_2');
+                }
+            } else { // login failed
+                $errorMessages[] = $this->languagemap->getI18NString('login.error.bad_login');
+            }
         }
 
-        header("Content-Type: text/plain");
-        echo json_encode($rhett);
+        // login succeeded. redirect to dashboard.
+        if ($user and empty($errorMessages)) {
+            $this->output->set_header("Location: " . base_url() . "ilios.php/dashboard_controller");
+            return;
+        }
+
+        // handle login error.
+        $this->output->set_header('Expires: 0');
+        $this->load->view('login/login', array(
+            'login_message' => implode('<br />', $errorMessages))
+        );
     }
 
     /**
@@ -404,5 +420,30 @@ class Authentication_Controller extends Ilios_Base_Controller
     public function _ldap_index ()
     {
         $this->_default_index(); // piggy-back on the default index method for displaying the login form
+    }
+
+    /**
+     * Takes a user record and populates the user session from it.
+     *
+     * @method array $user An associative array representing a user record.
+     */
+    protected function _storeUserInSession (array $user) {
+        $now = time();
+
+        $sessionData = array(
+            'uid' => $user['user_id'],
+            'username' => $user['email'],
+            'is_learner' => $this->user->userIsLearner($user['user_id']),
+            'has_instructor_access' => $this->user->userHasInstructorAccess($user['user_id']),
+            'has_admin_access' => $this->user->userHasAdminAccess($user['user_id']),
+            'primary_school_id' => $user['primary_school_id'],
+            'school_id' => $user['primary_school_id'],
+            'login' => $now,
+            'last' => $now,
+            'display_fullname' => $user['first_name'] . ' ' . $user['last_name'],
+            'display_last' => date('F j, Y G:i T', $now)
+        );
+
+        $this->session->set_userdata($sessionData);
     }
 }

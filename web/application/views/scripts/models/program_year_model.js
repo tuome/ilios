@@ -265,7 +265,7 @@ ProgramYearModel.prototype.getDirectorsAsFormattedText = function () {
 			rhett += '; ';
 		}
 
-		rhett += this.directors[key].getFormattedName(ilios.utilities.USER_NAME_FORMAT_LAST_FIRST);
+		rhett += this.directors[key].getFormattedName(ilios.utilities.UserNameFormatEnum.LAST_FIRST);
 	}
 
 	return rhett;
@@ -406,13 +406,13 @@ ProgramYearModel.prototype.compareTo = function (otherModel) {
 		return 1;			// arbitrary but consistent
 	}
 
-	if (ilios.utilities.arraySize(this.competencyArray)
-							!= ilios.utilities.arraySize(otherModel.competencyArray)) {
+	if (ilios.utilities.objectPropertyCount(this.competencyArray)
+							!= ilios.utilities.objectPropertyCount(otherModel.competencyArray)) {
 		return 1;			// arbitrary but consistent
 	}
 
-	if (ilios.utilities.arraySize(this.stewardArray)
-							!= ilios.utilities.arraySize(otherModel.stewardArray)) {
+	if (ilios.utilities.objectPropertyCount(this.stewardArray)
+							!= ilios.utilities.objectPropertyCount(otherModel.stewardArray)) {
 		return 1;			// arbitrary but consistent
 	}
 

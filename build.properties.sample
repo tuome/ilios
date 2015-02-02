@@ -94,7 +94,7 @@ db.username=XXXXXX
 db.password=XXXXXX
 
 #------------------------------------------------
-# UCSF user synchronization process settings
+# User synchronization process settings
 #------------------------------------------------
 #
 # LDAP hostname
@@ -108,6 +108,12 @@ tasks.user_sync.ldap.binddn=XXXXXX
 # LDAP password
 #
 tasks.user_sync.ldap.password=XXXXXX
+#
+# LDAP filter for finding current students
+# Defaults to a UCSF value for backwards compatability
+#
+tasks.user_sync.ldap.active_student_filter=(&(objectClass=person)(eduPersonAffiliation=student)(ucsfEduStuRegistrationStatusCode=*))
+tasks.user_sync.ldap.former_student_filter=XXXXXX
 
 #================================================
 # Ilios configuration overwrites (optional)
@@ -151,6 +157,23 @@ tasks.user_sync.ldap.password=XXXXXX
 #tasks.enrollment_export.enabled=true
 #tasks.teaching_reminders.enabled=true
 #tasks.user_sync.enabled=true
+#tasks.audit_log.enabled=true
+
+#------------------------------------------------
+# Settings for Google Analytics
+#------------------------------------------------
+#
+#ga_tracking_id='UA-XXXXXXXX-1'
+#ga_cookie_domain='auto'
+
+#------------------------------------------------
+# Settings for the audit log cron task
+#------------------------------------------------
+#
+#tasks.audit_log.daily_log_file_path='/web/ilios/cron/daily_audit_logs.txt'
+#tasks.audit_log.truncate_log_file_path='/web/ilios/cron/audit_logs.txt'
+#tasks.audit_log.days_to_keep=90
+#tasks.audit_log.rotate_logs=true
 
 #================================================
 # DB installation

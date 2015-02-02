@@ -10,6 +10,7 @@
  * YUI utilities
  * YUI container family
  * scripts/ilios_base.js
+ * scripts/ilios_alert.js
  */
 
 /**
@@ -35,7 +36,7 @@ ilios.namespace('dom');
  *          trigger:            the id string of the element which should invoke the display of
  *                                  this panel; clicking on this id string must be wired
  *                                  elsewhere to fire thusly:
- *                                      IEvent.fire({action: 'default_dialog_open', ...});
+ *                                      ilios.ui.onIliosEvent.fire({action: 'default_dialog_open', ...});
  *                                  where 'default_dialog_open' is the salient action.
  *          target:             the id string for the container which lists the user selected
  *                                  items of the dialog
@@ -59,7 +60,7 @@ ilios.dom.buildDialogPanel = function (use, less, args) {
 
     // Define various event handlers for Dialog
     var handleSubmit = function () { // Done button
-        IEvent.fire({object: 'modal_dialog_panel', action: 'submit', event: 'closing'});
+        ilios.ui.onIliosEvent.fire({object: 'modal_dialog_panel', action: 'submit', event: 'closing'});
 
         // move data from picked list of items in div to an input form element
         // todo loki sez: this type of stuffing [was here before me and] is a bit abgefickt
@@ -70,7 +71,7 @@ ilios.dom.buildDialogPanel = function (use, less, args) {
     };
 
     var handleCancel = function () {
-        IEvent.fire({object: 'modal_dialog_panel', action: 'cancel', event: 'closing'});
+        ilios.ui.onIliosEvent.fire({object: 'modal_dialog_panel', action: 'cancel', event: 'closing'});
 
         this.cancel();
     };
@@ -80,12 +81,12 @@ ilios.dom.buildDialogPanel = function (use, less, args) {
 
         response = response.split("<!")[0];
 
-        IEvent.fire({ object: 'modal_dialog_panel', action: 'succeed', event: 'ajaxresponse',
+        ilios.ui.onIliosEvent.fire({ object: 'modal_dialog_panel', action: 'succeed', event: 'ajaxresponse',
                       target: args['target'], data: response });
     };
 
     var handleFailure = function (o) {
-        IEvent.fire({object: 'modal_dialog_panel', action: 'fail', event: 'ajaxresponse'});
+        ilios.ui.onIliosEvent.fire({object: 'modal_dialog_panel', action: 'fail', event: 'ajaxresponse'});
 
         ilios.alert.alert('HTTP Request connection failure for ' + args['hidden']
         + ' form element.\nStatus: ' + o.status);
@@ -112,7 +113,7 @@ ilios.dom.buildDialogPanel = function (use, less, args) {
         buttons: buttonArray});
 
     dialog.showDialogPane = function () {
-        IEvent.fire({object: 'modal_dialog_panel', action: 'show', event: 'opening',
+        ilios.ui.onIliosEvent.fire({object: 'modal_dialog_panel', action: 'show', event: 'opening',
                      target: args['target']});
 
         dialog.center();
@@ -150,7 +151,7 @@ ilios.dom.buildDialogPanel = function (use, less, args) {
             }
         }
     };
-    IEvent.subscribe(displayOnTriggerHandler);
+    ilios.ui.onIliosEvent.subscribe(displayOnTriggerHandler);
 };
 
 /**
@@ -243,7 +244,7 @@ ilios.dom.generateAutoCompleteDialogMarkup = function (args) {
         ilios.dom.removeLIElement(e);
         // we fire this event to trigger the force refresh handler defined in
         //          ilios.ui.setupDialogAutoComplete method
-        IEvent.fire({state: 'acquery', target: args['picked']});
+        ilios.ui.onIliosEvent.fire({state: 'acquery', target: args['picked']});
 
         if (args['deselect_handler'] != null) {
             var handler = args['deselect_handler'];
@@ -328,10 +329,10 @@ ilios.dom.generateAutoCompleteDialogMarkup = function (args) {
  *                                          whose id is provided; the elements represent the UI
  *                                          single-selection widget
  *          hide_autocomplete_input:    if non-null, then the autocomplete input will be hidden
- *          tab_title:                  the title for the tab containing the selection widget;
- *          panel_title_text:           the header title text for the panel (not to be
- *                                          confused with the title bar text which will
- *                                          be "Please select items")
+ *          tab_title:                  the title for the tab containing the selection widget (optional, defaults to "Available items")
+ *          selected_items_title:       the title for the selected items list (optional, defaults to "Selected items")
+ *          title:                      the widget title (optional, defaults to "Please select items")
+ *          panel_title_text:           the header title text for the panel (optional, not displayed when not given)
  *          dom_root:                   the id of the DOM element into which this markup should
  *                                          be inserted
  *          panel_width:                if this is non-null, it is expected to a valid CSS
@@ -339,7 +340,7 @@ ilios.dom.generateAutoCompleteDialogMarkup = function (args) {
  *          trigger:                    the id string of the element which should invoke the
  *                                          display of this panel; clicking on this id string
  *                                          must be wired elsewhere to fire thusly:
-                                                    IEvent.fire({action: 'gen_dialog_open', ...});
+                                                    ilios.ui.onIliosEvent.fire({action: 'gen_dialog_open', ...});
  *                                          where 'gen_dialog_open' is the salient action, and
  *                                          the event may also contain a key for
  *                                          'container_number' the value of which will get
@@ -353,12 +354,12 @@ ilios.dom.generateGenericDialogMarkupAndWireContent = function (use, less, args)
     var widgetParentDivId = args['id_uniquer'] + 'widget_div';
     var domGenerator = args['widget_dom_generator'];
     var handleCancel = function () {
-        IEvent.fire({object: 'modal_gen_dialog_panel', action: 'cancel', event: 'closing'});
+        ilios.ui.onIliosEvent.fire({object: 'modal_gen_dialog_panel', action: 'cancel', event: 'closing'});
 
         this.cancel();
     };
     var handleSubmit = function () {
-        IEvent.fire({object: 'modal_gen_dialog_panel', action: 'submit', event: 'closing'});
+        ilios.ui.onIliosEvent.fire({object: 'modal_gen_dialog_panel', action: 'submit', event: 'closing'});
 
         this.submit();
     };
@@ -373,9 +374,10 @@ ilios.dom.generateGenericDialogMarkupAndWireContent = function (use, less, args)
     var autoCompleteTextFieldId = args['id_uniquer'] + '_auto_comp_input';
     var selectedItemListElement = args['id_uniquer'] + '_selected_item_list';
     var autoCompleter = null;
-    var aStr = ilios_i18nVendor.getI18NString('general.phrases.select_items');
+    var aStr = args['title'] || ilios_i18nVendor.getI18NString('general.phrases.select_items');
     var noAutoCompleter = (args['remote_data'] == null);
     var showAutoCompleteInput = (args['hide_autocomplete_input'] == null);
+    var panelTitle = args['panel_title_text'] || '';
 
     contents += '<div class="visuallyhidden" id="' + autoCompleteHiddenContainerId + '"></div>\n';
 
@@ -383,19 +385,21 @@ ilios.dom.generateGenericDialogMarkupAndWireContent = function (use, less, args)
     contents += '<div class="bd">\n';
     contents += '<div class="dialog_wrap">';
 
-    contents += '<p>' + args['panel_title_text'] + '</p>';
+    if (panelTitle) {
+        contents += '<p>' + panelTitle + '</p>';
+    }
 
     if (args['indeterminate_loading_id'] != null) {
         contents += '<div id="' + args['indeterminate_loading_id']
                         + '" style="position: absolute; top: 15px; right: 12px; display: none;"'
                         + ' class="indeterminate_progress_text">';
-        contents += '<div class="indeterminate_progress" style="display: inline-block;"></div> '
+        contents += '<div class="indeterminate_progress" style="display: inline-block;"></div> ';
         contents += ilios_i18nVendor.getI18NString('general.terms.loading') + '...</div>';
     }
 
     contents += '<div class="dialog_left">';
 
-    aStr = ilios_i18nVendor.getI18NString('general.phrases.selected_items');
+    aStr = args['selected_items_title'] || ilios_i18nVendor.getI18NString('general.phrases.selected_items');
     contents += '<label class="picked_label" for="' + selectedItemListElement + '">';
     contents += aStr;
     contents += '</label>';
@@ -407,7 +411,7 @@ ilios.dom.generateGenericDialogMarkupAndWireContent = function (use, less, args)
     contents += '<div class="dialog_right">';
 
     // YUI -- IF THERE'S NO FORM INSIDE A DIALOG DOM, IT REVEALS A YUI BUG
-    contents += '<form method="POST" action="matters not at all">\n';
+    contents += '<form method="POST">\n';
 
 
     contents += '<div id="' + args['id_uniquer'] + 'nav_tabs" class="yui-navset">\n';
@@ -517,7 +521,7 @@ ilios.dom.generateGenericDialogMarkupAndWireContent = function (use, less, args)
             }
         }
     };
-    IEvent.subscribe(displayOnTriggerHandler);
+    ilios.ui.onIliosEvent.subscribe(displayOnTriggerHandler);
 
     document.getElementById(selectedItemListElement).onclick = function (e) {
         var shouldRemove = true;
@@ -575,7 +579,7 @@ ilios.dom.generateGenericDialogMarkupAndWireContent = function (use, less, args)
         }
 
         return rhett;
-    }
+    };
 
     autoCompleter.resultTypeList = false;
 
@@ -602,7 +606,7 @@ ilios.dom.generateGenericDialogMarkupAndWireContent = function (use, less, args)
             autoCompleter.sendQuery('');
         }
     };
-    IEvent.subscribe(forceCandidateListRefreshHandler);
+    ilios.ui.onIliosEvent.subscribe(forceCandidateListRefreshHandler);
 
     return selectedItemListElement;
 };
@@ -694,7 +698,7 @@ ilios.dom.generateGenericDialogMarkupAndWireContent = function (use, less, args)
  *          trigger:                    the id string of the element which should invoke the
  *                                          display of this panel; clicking on this id string
  *                                          must be wired elsewhere to fire thusly:
- *                                              IEvent.fire({action: 'gen_dialog_open', ...});
+ *                                              ilios.ui.onIliosEvent.fire({action: 'gen_dialog_open', ...});
  *                                          where 'gen_dialog_open' is the salient action, and
  *                                          the event may also contain a key for
  *                                          'container_number' the value of which will get
@@ -709,12 +713,12 @@ ilios.dom.generateTreeSelectionDialogMarkupAndWireContent = function (use, less,
     var selectedDOMGenerator = args['selected_div_dom_generator'];
     var unselectedDOMGenerator = args['unselected_div_dom_generator'];
     var handleCancel = function () {
-        IEvent.fire({object: 'modal_tree_dialog_panel', action: 'cancel', event: 'closing'});
+        ilios.ui.onIliosEvent.fire({object: 'modal_tree_dialog_panel', action: 'cancel', event: 'closing'});
 
         this.cancel();
     };
     var handleSubmit = function () {
-        IEvent.fire({object: 'modal_tree_dialog_panel', action: 'submit', event: 'closing'});
+        ilios.ui.onIliosEvent.fire({object: 'modal_tree_dialog_panel', action: 'submit', event: 'closing'});
 
         this.submit();
     };
@@ -745,7 +749,7 @@ ilios.dom.generateTreeSelectionDialogMarkupAndWireContent = function (use, less,
         contents += '<div id="' + args['indeterminate_loading_id']
                         + '" style="position: absolute; top: 15px; right: 12px; display: none;"'
                         + ' class="indeterminate_progress_text">';
-        contents += '<div class="indeterminate_progress" style="display: inline-block;"></div> '
+        contents += '<div class="indeterminate_progress" style="display: inline-block;"></div> ';
         contents += ilios_i18nVendor.getI18NString('general.terms.loading') + '...</div>';
     }
     if (args['single_selection'] == null) {
@@ -769,7 +773,7 @@ ilios.dom.generateTreeSelectionDialogMarkupAndWireContent = function (use, less,
     }
 
     // YUI -- IF THERE'S NO FORM INSIDE A DIALOG DOM, IT REVEALS A YUI BUG
-    contents += '<form method="POST" action="matters not at all">\n';
+    contents += '<form method="POST">\n';
 
 
     contents += '<div id="' + args['id_uniquer'] + 'nav_tabs" class="yui-navset">\n';
@@ -792,7 +796,7 @@ ilios.dom.generateTreeSelectionDialogMarkupAndWireContent = function (use, less,
     else {
         i18nStr = 'default_tree_div';
     }
-    contents += '<div id="' + widgetParentDivId + '" class="'+ i18nStr + '">\n'
+    contents += '<div id="' + widgetParentDivId + '" class="'+ i18nStr + '">\n';
 
     contents += '</div></div>\n';   // closes through single_selector_tab div
 
@@ -869,7 +873,7 @@ ilios.dom.generateTreeSelectionDialogMarkupAndWireContent = function (use, less,
             }
         }
     };
-    IEvent.subscribe(displayOnTriggerHandler);
+    ilios.ui.onIliosEvent.subscribe(displayOnTriggerHandler);
 
     // MAY RETURN THIS BLOCK
     if (noAutoCompleter) {
@@ -910,7 +914,7 @@ ilios.dom.generateTreeSelectionDialogMarkupAndWireContent = function (use, less,
         }
 
         return rhett;
-    }
+    };
 
     autoCompleter.resultTypeList = false;
 
@@ -939,7 +943,7 @@ ilios.dom.generateTreeSelectionDialogMarkupAndWireContent = function (use, less,
             autoCompleter.sendQuery('');
         }
     };
-    IEvent.subscribe(forceCandidateListRefreshHandler);
+    ilios.ui.onIliosEvent.subscribe(forceCandidateListRefreshHandler);
 
     return selectedItemTreeElement;
 };
@@ -965,9 +969,8 @@ ilios.dom.generateTreeSelectionDialogMarkupAndWireContent = function (use, less,
  *                                          whose id is provided; the elements represent the UI
  *                                          single-selection widget
  *          tab_title:                  the title for the tab containing the selection widget
- *          panel_title_text:           the header title text for the panel (not to be
- *                                          confused with the title bar text which will
- *                                          be "Please select items")
+ *          title:                      the widget title (optional, defaults to "Please select items")
+ *          panel_title_text:           the header title text for the panel (optional, not displayed when not given)
  *          dom_root:                   the id of the DOM element into which this markup should
  *                                          be inserted
  *          panel_width:                if this is non-null, it is expected to a valid CSS
@@ -975,7 +978,7 @@ ilios.dom.generateTreeSelectionDialogMarkupAndWireContent = function (use, less,
  *          trigger:                    the id string of the element which should invoke the
  *                                          display of this panel; clicking on this id string
  *                                          must be wired elsewhere to fire thusly:
-                                                    IEvent.fire({action: 'sac_dialog_open', ...});
+                                                    ilios.ui.onIliosEvent.fire({action: 'sac_dialog_open', ...});
  *                                          where 'sac_dialog_open' is the salient action.
  */
 ilios.dom.generateSelectAndCloseDialogMarkupAndWireContent = function (use, less, args) {
@@ -983,7 +986,7 @@ ilios.dom.generateSelectAndCloseDialogMarkupAndWireContent = function (use, less
     var widgetParentDivId = args['id_uniquer'] + 'widget_div';
     var domGenerator = args['widget_dom_generator'];
     var handleCancel = function () {
-        IEvent.fire({object: 'modal_sac_dialog_panel', action: 'cancel', event: 'closing'});
+        ilios.ui.onIliosEvent.fire({object: 'modal_sac_dialog_panel', action: 'cancel', event: 'closing'});
 
         this.cancel();
     };
@@ -992,16 +995,18 @@ ilios.dom.generateSelectAndCloseDialogMarkupAndWireContent = function (use, less
     var panelWidth = (args['panel_width'] != null) ? args['panel_width'] : "600px";
     var dialog = null;
     var displayOnTriggerHandler = null;
-    var i18nStr = ilios_i18nVendor.getI18NString('general.phrases.select_items');
+    var i18nStr = args['title'] || ilios_i18nVendor.getI18NString('general.phrases.select_items');
+    var panelTitleText = args['panel_title_text'] || '';
 
     contents += '<div class="hd">' + i18nStr + '</div>\n';
     contents += '<div class="bd">\n';
 
-    contents += '<p>' + args['panel_title_text'] + '</p>';
-
+    if (panelTitleText) {
+        contents += '<p>' + panelTitleText + '</p>';
+    }
 
     // YUI -- IF THERE'S NO FORM INSIDE A DIALOG DOM, IT REVEALS A YUI BUG
-    contents += '<form method="POST" action="matters not at all">\n';
+    contents += '<form method="POST">\n';
 
 
     contents += '<div id="' + args['id_uniquer'] + 'nav_tabs" class="yui-navset">\n';
@@ -1065,7 +1070,7 @@ ilios.dom.generateSelectAndCloseDialogMarkupAndWireContent = function (use, less
             }
         }
     };
-    IEvent.subscribe(displayOnTriggerHandler);
+    ilios.ui.onIliosEvent.subscribe(displayOnTriggerHandler);
 };
 
 ilios.dom.removeLIElement = function (e) {
@@ -1241,7 +1246,7 @@ ilios.dom.buildChildContainerDOMTree = function (containerNumber, saveText, save
         id: '' + containerNumber + '_child_draft_text'
     });
     scratchElement.addClass('child_publish_status');
-    hdElement.appendChild(scratchElement.get('element'))
+    hdElement.appendChild(scratchElement.get('element'));
 
     // Delete widget
     deleteEl = new Element(document.createElement('div'));

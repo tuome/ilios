@@ -115,7 +115,6 @@ class Ilios_UserSync_Process_NonStudentProcess extends Ilios_UserSync_Process
                 }
                 if ($userMatch) {
                     $extUser = $extUsers->current();
-
                     // validate external user
                     $this->_validateIncomingUserRecord($extUser);
 
@@ -337,14 +336,16 @@ class Ilios_UserSync_Process_NonStudentProcess extends Ilios_UserSync_Process
     protected function _updateUser (Ilios_UserSync_ExternalUser $externalUser, array $user)
     {
         // update user record
-        $this->_userDao->updateUser($user['user_id'],
-             $externalUser->getFirstName(),
-             $externalUser->getMiddleName(),
-             $externalUser->getLastName(),
-             true, // this does not matter
-             $externalUser->getPhone(),
-             false // ACHTUNG! we do not want to touch up already established user role associations!
-             );
+        $this->_userDao->updateUser(
+            $user['user_id'],
+            $externalUser->getFirstName(),
+            $externalUser->getMiddleName(),
+            $externalUser->getLastName(),
+            true, // this does not matter
+            false,
+            $externalUser->getPhone(),
+            false // ACHTUNG! we do not want to touch up already established user role associations!
+        );
     }
 
     /**
@@ -357,13 +358,13 @@ class Ilios_UserSync_Process_NonStudentProcess extends Ilios_UserSync_Process
         $uid = $user->getUid();
         if (empty($uid)) {
             throw new Ilios_UserSync_Process_ExternalUserException(
-            			'Missing UID for inbound user: ' . $user,
+                        'Missing UID for inbound user: ' . $user,
                         Ilios_UserSync_Process_ExternalUserException::INVALID_UID);
         }
         $email = $user->getEmail();
         if (empty($email) || false === filter_var($email, FILTER_VALIDATE_EMAIL)) {
             throw new Ilios_UserSync_Process_ExternalUserException(
-            			'Missing or invalid email for inbound user: ' . $user,
+                        'Missing or invalid email for inbound user: ' . $user,
                         Ilios_UserSync_Process_ExternalUserException::INVALID_EMAIL);
         }
     }

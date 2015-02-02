@@ -25,13 +25,15 @@ class Course_Management extends Ilios_Web_Controller
     }
 
     /**
-     * Required POST or GET parameters:
+     * Expects the following GET parameters:
+     *     'course_id' ... the course identifier
+     *
+      * Expects the following GET or POST parameters:
+      *     'session_id' ... the session identifier
      */
     public function index ()
     {
         $data = array();
-        $data['institution_name'] = $this->config->item('ilios_institution_name');
-        $data['user_id'] = $this->session->userdata('uid');
 
         // authorization check
         if (!$this->session->userdata('has_instructor_access')) {
@@ -44,7 +46,7 @@ class Course_Management extends Ilios_Web_Controller
         $key = 'course_management.title_bar';
         $data['title_bar_string'] = $this->languagemap->getI18NString($key);
 
-        $courseId = $this->input->get_post('course_id');
+        $courseId = $this->input->get('course_id');
         if ($courseId != '') {
             $data['course_id'] = $courseId;
             $data['session_id'] = $this->input->get_post('session_id');
@@ -82,11 +84,11 @@ class Course_Management extends Ilios_Web_Controller
             $data['session_id'] = -1;
         }
 
-        $userRow = $this->user->getRowForPrimaryKeyId($data['user_id']);
+        $userRow = $this->user->getRowForPrimaryKeyId($this->session->userdata('uid'));
 
         $data['admin_user_short_name'] = $userRow->first_name . ' ' . $userRow->last_name;
 
-        $data['viewbar_title'] = $data['institution_name'];
+        $data['viewbar_title'] = $this->config->item('ilios_institution_name');
 
         $schoolId =  $this->session->userdata('school_id');
         $schoolRow = $this->school->getRowForPrimaryKeyId($schoolId);
@@ -128,24 +130,6 @@ class Course_Management extends Ilios_Web_Controller
         $key = 'course_management.add_course.title';
         $data['add_new_course_string'] = $this->languagemap->getI18NString($key);
 
-        $key = 'course_management.add_course';
-        $data['add_course_string'] = $this->languagemap->getI18NString($key);
-
-        $key = 'general.phrases.add_objective';
-        $data['add_objective_string'] = $this->languagemap->getI18NString($key);
-
-        $key = 'course_management.add_session';
-        $data['add_session_string'] = $this->languagemap->getI18NString($key);
-
-        $key = 'general.phrases.collapse_all';
-        $data['collapse_sessions_string'] = $this->languagemap->getI18NString($key);
-
-        $key = 'course_management.current_level';
-        $data['current_level_string'] = $this->languagemap->getI18NString($key);
-
-        $key = 'course_management.external_course_id';
-        $data['external_course_id_string'] = $this->languagemap->getI18NString($key);
-
         $key = 'course_management.objective_edit_title';
         $data['edit_objective_dialog_title'] = $this->languagemap->getI18NString($key);
 
@@ -154,9 +138,6 @@ class Course_Management extends Ilios_Web_Controller
 
         $key = 'course_management.page_header';
         $data['page_header_string'] = $this->languagemap->getI18NString($key);
-
-        $key = 'course_management.select_cohorts';
-        $data['select_cohorts_string'] = $this->languagemap->getI18NString($key);
 
         $key = 'course_management.select_parent_objectives';
         $data['select_parent_objectives_string'] = $this->languagemap->getI18NString($key);
@@ -170,23 +151,8 @@ class Course_Management extends Ilios_Web_Controller
         $key = 'general.phrases.search.hint';
         $data['generic_search_hint'] = $this->languagemap->getI18NString($key);
 
-        $key = 'course_management.session.sort.alpha_asc';
-        $data['sort_alpha_asc'] = $this->languagemap->getI18NString($key);
-
         $key = 'general.phrases.default_order';
         $data['sort_default_ordering'] = $this->languagemap->getI18NString($key);
-
-        $key = 'course_management.session.sort.alpha_asc';
-        $data['sort_alpha_asc'] = $this->languagemap->getI18NString($key);
-
-        $key = 'course_management.session.sort.alpha_desc';
-        $data['sort_alpha_desc'] = $this->languagemap->getI18NString($key);
-
-        $key = 'course_management.session.sort.date_asc';
-        $data['sort_date_asc'] = $this->languagemap->getI18NString($key);
-
-        $key = 'course_management.session.sort.date_desc';
-        $data['sort_date_desc'] = $this->languagemap->getI18NString($key);
 
         $key = 'course_management.multiple_offerings_generator.parent_group_strategy';
         $data['phrase_parent_group_strategy'] = $this->languagemap->getI18NString($key);
@@ -200,26 +166,8 @@ class Course_Management extends Ilios_Web_Controller
         $key = 'general.phrases.academic_year';
         $data['phrase_academic_year_string'] = $this->languagemap->getI18NString($key);
 
-        $key = 'course_management.clerkship_type';
-        $data['phrase_clerkship_type_string'] = $this->languagemap->getI18NString($key);
-
-        $key = 'course_management.not_a_clerkship';
-        $data['phrase_not_a_clerkship_string'] = $this->languagemap->getI18NString($key);
-
-        $key = 'general.phrases.associated_learners';
-        $data['phrase_associated_learners_string'] = $this->languagemap->getI18NString($key);
-
-        $key = 'general.phrases.course_level';
-        $data['phrase_course_level_string'] = $this->languagemap->getI18NString($key);
-
         $key = 'general.phrases.course_name';
         $data['phrase_course_name_string'] = $this->languagemap->getI18NString($key);
-
-        $key = 'general.phrases.course_year';
-        $data['phrase_course_year_string'] = $this->languagemap->getI18NString($key);
-
-        $key = 'general.phrases.end_date';
-        $data['phrase_end_date_string'] = $this->languagemap->getI18NString($key);
 
         $key = 'general.phrases.end_time';
         $data['phrase_end_time_string'] = $this->languagemap->getI18NString($key);
@@ -230,12 +178,6 @@ class Course_Management extends Ilios_Web_Controller
         $key = 'general.phrases.file_type';
         $data['phrase_file_type_string'] = $this->languagemap->getI18NString($key);
 
-        $key = 'general.phrases.learning_materials';
-        $data['phrase_learning_materials_string'] = $this->languagemap->getI18NString($key);
-
-        $key = 'general.phrases.learning_objectives';
-        $data['phrase_learning_objectives_string'] = $this->languagemap->getI18NString($key);
-
         $key = 'general.phrases.mesh_terms';
         $data['phrase_mesh_terms_string'] = $this->languagemap->getI18NString($key);
 
@@ -245,23 +187,11 @@ class Course_Management extends Ilios_Web_Controller
         $key = 'general.phrases.owner_role';
         $data['phrase_owner_role_string'] = $this->languagemap->getI18NString($key);
 
-        $key = 'general.phrases.program_title';
-        $data['phrase_program_title_string'] = $this->languagemap->getI18NString($key);
-
-        $key = 'general.phrases.program_cohorts';
-        $data['phrase_program_cohort_string'] = $this->languagemap->getI18NString($key);
-
-        $key = 'general.phrases.show_course_summary';
-        $data['phrase_show_course_summary'] = $this->languagemap->getI18NString($key);
-
         $key = 'general.phrases.show_less';
         $data['phrase_show_less_string'] = strtolower($this->languagemap->getI18NString($key));
 
         $key = 'general.phrases.show_more';
         $data['phrase_show_more_string'] = strtolower($this->languagemap->getI18NString($key));
-
-        $key = 'general.phrases.start_date';
-        $data['phrase_start_date_string'] = $this->languagemap->getI18NString($key);
 
         $key = 'general.phrases.start_time';
         $data['phrase_start_time_string'] = $this->languagemap->getI18NString($key);
@@ -272,26 +202,14 @@ class Course_Management extends Ilios_Web_Controller
         $key = 'general.phrases.upload_date';
         $data['phrase_upload_date_string'] = $this->languagemap->getI18NString($key);
 
-        $key = 'general.terms.add';
-        $data['word_add_string'] = $this->languagemap->getI18NString($key);
-
         $key = 'general.terms.citation';
         $data['word_citation_string'] = $this->languagemap->getI18NString($key);
-
-        $key = 'general.terms.cohort';
-        $data['word_cohort_string'] = $this->languagemap->getI18NString($key);
-
-        $key = 'general.terms.competencies';
-        $data['word_competencies_string'] = $this->languagemap->getI18NString($key);
 
         $key = 'general.terms.description';
         $data['word_description_string'] = $this->languagemap->getI18NString($key);
 
         $key = 'general.terms.directors';
         $data['word_directors_string'] = $this->languagemap->getI18NString($key);
-
-        $key = 'general.terms.topics';
-        $data['word_disciplines_string'] = $this->languagemap->getI18NString($key);
 
         $key = 'general.terms.done';
         $data['word_done_string'] = $this->languagemap->getI18NString($key);
@@ -411,7 +329,7 @@ class Course_Management extends Ilios_Web_Controller
                                         = $this->learningMaterial->getLearningMaterialStatuses();
 
 
-        $data['preference_array'] = $this->getPreferencesArrayForUser();
+        $data['user_preferences_json'] = json_encode($this->_getUserPreferences());
 
         $this->load->view('course/course_manager', $data);
     }
@@ -421,7 +339,7 @@ class Course_Management extends Ilios_Web_Controller
      * Prints out an JSON-formatted array of all instructors and instructor groups
      * associated with a given course's school and cohorts.
      *
-     * Excepts the following POST parameters:
+     * Expects the following POST parameters:
      *     'course_id' ... the course identifier
      */
     public function getAvailableInstructors ()
@@ -434,7 +352,7 @@ class Course_Management extends Ilios_Web_Controller
             return;
         }
 
-        $courseId = $this->input->get_post('course_id');
+        $courseId = $this->input->post('course_id');
 
         // load the course
         $courseRow = $this->course->getRowForPrimaryKeyId($courseId);
@@ -465,6 +383,10 @@ class Course_Management extends Ilios_Web_Controller
         echo json_encode($rhett);
     }
 
+    /**
+     * Expects the following POST parameters:
+     *     'course_id' ... the course identifier
+    */
     public function getStudentGroupTrees ()
     {
         // authorization check
@@ -473,7 +395,7 @@ class Course_Management extends Ilios_Web_Controller
             return;
         }
 
-        $courseId = $this->input->get_post('course_id');
+        $courseId = $this->input->post('course_id');
 
         $cohorts = $this->course->getCohortsForCourse($courseId);
         $rhett = $this->getStudentGroupTreesForCohorts($cohorts);
@@ -482,6 +404,11 @@ class Course_Management extends Ilios_Web_Controller
         echo json_encode($rhett);
     }
 
+    /**
+     * Expects the following GET parameters:
+     *     'course_id' ... the course identifier
+     *    'year'       ... the year name
+    */
     public function getRolloverSummaryViewForCourseIdInAcademicYear ()
     {
         // authorization check
@@ -490,8 +417,8 @@ class Course_Management extends Ilios_Web_Controller
             return;
         }
 
-        $courseId = $this->input->get_post('course_id');
-        $year = $this->input->get_post('year');
+        $courseId = $this->input->get('course_id');
+        $year = $this->input->get('year');
 
         $rhett = $this->course->getRolloverViewForAcademicYear($courseId, $year);
 
@@ -507,6 +434,13 @@ class Course_Management extends Ilios_Web_Controller
         echo json_encode($rhett);
     }
 
+    /**
+     * Expects the following POST parameters:
+     *     'course_id' ... the course identifier
+     *     'year' ... the new year
+     *     'start_date' ... the start date
+     *     'end_date' ... the end date
+    */
     public function rolloverCourse ()
     {
         $rhett = array();
@@ -519,11 +453,11 @@ class Course_Management extends Ilios_Web_Controller
 
         $userId = $this->session->userdata('uid');
         $schoolId = $this->session->userdata('school_id');
-        $courseId = $this->input->get_post('course_id');
-        $newYear = $this->input->get_post('year');
-        $cloneOfferingsToo = ($this->input->get_post('offerings') == 'true');
-        $startDate = $this->input->get_post('start_date');
-        $endDate = $this->input->get_post('end_date');
+        $courseId = $this->input->post('course_id');
+        $newYear = $this->input->post('year');
+        $cloneOfferingsToo = ($this->input->post('offerings') == 'true');
+        $startDate = $this->input->post('start_date');
+        $endDate = $this->input->post('end_date');
 
         $failedTransaction = true;
         $transactionRetryCount = Ilios_Database_Constants::TRANSACTION_RETRY_COUNT;
@@ -547,12 +481,12 @@ class Course_Management extends Ilios_Web_Controller
                 $this->course->commitTransaction();
 
                 // save audit trail
-                $this->auditEvent->startTransaction();
-                $success = $this->auditEvent->saveAuditEvent($auditAtoms, $userId);
-                if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                    $this->auditEvent->rollbackTransaction();
+                $this->auditAtom->startTransaction();
+                $success = $this->auditAtom->saveAuditEvent($auditAtoms, $userId);
+                if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                    $this->auditAtom->rollbackTransaction();
                 } else {
-                    $this->auditEvent->commitTransaction();
+                    $this->auditAtom->commitTransaction();
                 }
 
                 $failedTransaction = false;
@@ -582,7 +516,7 @@ class Course_Management extends Ilios_Web_Controller
             return;
         }
 
-        $title = $this->input->get_post('query');
+        $title = $this->input->post('query');
         $schoolId = $this->session->userdata('school_id');
         $uid = $this->session->userdata('uid');
         $queryResults = $this->course->getCoursesFilteredOnTitleMatch($title, $schoolId, $uid);
@@ -597,7 +531,39 @@ class Course_Management extends Ilios_Web_Controller
         echo json_encode($rhett);
     }
 
+    /**
+     * XHR handler.
+     * Prints out a JSON-formatted array of courses.
+     * Expects the following values to be POSTed:
+     * - 'query' ... a title/title-fragment to search courses by
+     */
+    public function getCourseListForQueryForCalendar ()
+    {
+        // authorization check
+        if (! $this->session->userdata('has_instructor_access')) {
+            $this->_printAuthorizationFailedXhrResponse();
+            return;
+        }
 
+        $title = $this->input->post('query');
+        $schoolId = $this->session->userdata('school_id');
+        $uid = $this->session->userdata('uid');
+        $queryResults = $this->course->getCoursesFilteredOnTitleMatchForCalendar($title, $schoolId, $uid);
+
+        $rhett = array();
+        foreach ($queryResults->result_array() as $row) {
+            $row['unique_id'] = $this->course->getUniqueId($row['course_id']);
+            array_push($rhett, $row);
+        }
+
+        header("Content-Type: text/plain");
+        echo json_encode($rhett);
+    }
+
+    /**
+     * Expects the following POST parameters:
+     *     'cohort_id' ... the cohort identifier
+    */
     public function getCohortObjectives ()
     {
         // authorization check
@@ -606,7 +572,7 @@ class Course_Management extends Ilios_Web_Controller
             return;
         }
 
-        $cohorts = explode(",", $this->input->get_post('cohort_id'));
+        $cohorts = explode(",", $this->input->post('cohort_id'));
         $rhett = $this->_getObjectivesForCohorts($cohorts);
 
         header("Content-Type: text/plain");
@@ -623,6 +589,10 @@ class Course_Management extends Ilios_Web_Controller
      *              'title', 'start_date', 'end_date', 'course_year_start' and 'course_level'. Start
      *              and end dates, and course level, are arbitrary but are passed back so that the
      *              client side model correctly reflects the [arbitrary] database state.
+     *
+     * Expects the following POST parameters:
+     *     'new_course_title' ... string name of the new course
+     *     'new_academic_year' ... the new year
      */
     public function addNewCourse ()
     {
@@ -642,13 +612,13 @@ class Course_Management extends Ilios_Web_Controller
         // TODO i18n error message text
         $this->form_validation->set_rules('new_course_title', 'Course Name', 'trim|required');
 
-        $title = $this->input->get_post('new_course_title');
+        $title = $this->input->post('new_course_title');
 
         if (! $this->form_validation->run()) {
             $msg = $this->languagemap->getI18NString('general.error.data_validation');
             $rhett['error'] = $msg . ": " . validation_errors();
         } else {
-            $year = $this->input->get_post('new_academic_year');
+            $year = $this->input->post('new_academic_year');
 
             if ($this->course->courseExistsWithTitleAndYear($title, $year)) {
                 $msg = $this->languagemap->getI18NString('course_management.error.duplicate_title_year');
@@ -672,12 +642,12 @@ class Course_Management extends Ilios_Web_Controller
                         $this->course->commitTransaction();
 
                         // save audit trail
-                        $this->auditEvent->startTransaction();
-                        $success = $this->auditEvent->saveAuditEvent($auditAtoms, $userId);
-                        if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                            $this->auditEvent->rollbackTransaction();
+                        $this->auditAtom->startTransaction();
+                        $success = $this->auditAtom->saveAuditEvent($auditAtoms, $userId);
+                        if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                            $this->auditAtom->rollbackTransaction();
                         } else {
-                            $this->auditEvent->commitTransaction();
+                            $this->auditAtom->commitTransaction();
                         }
 
                         $failedTransaction = false;
@@ -780,12 +750,6 @@ class Course_Management extends Ilios_Web_Controller
             return;
         }
         try {
-            $learningMaterials = Ilios_Json::deserializeJsonArray($this->input->post('learning_materials'), true);
-        } catch (Ilios_Exception $e) {
-            $this->_printErrorXhrResponse('course_management.error.course_save.input_validation.learning_materials');
-            return;
-        }
-        try {
             $objectives = Ilios_Json::deserializeJsonArray($this->input->post('objective'), true);
         } catch (Ilios_Exception $e) {
             $this->_printErrorXhrResponse('course_management.error.course_save.input_validation.objectives');
@@ -814,7 +778,7 @@ class Course_Management extends Ilios_Web_Controller
             $results = $this->course->saveCourseWithId($courseId, $title,
                 $externalId, $startDate, $endDate, $courseLevel, $cohorts,
                 $disciplines, $directors, $meshTerms, $objectives,
-                $learningMaterials, $publishId, $publishAsTBD, $clerkshipTypeId,
+                $publishId, $publishAsTBD, $clerkshipTypeId,
                 $auditAtoms);
 
             if (isset($results['error']) || $this->course->transactionAtomFailed()) {
@@ -830,12 +794,12 @@ class Course_Management extends Ilios_Web_Controller
                 $this->course->commitTransaction();
 
                 // save audit trail
-                $this->auditEvent->startTransaction();
-                $success = $this->auditEvent->saveAuditEvent($auditAtoms, $userId);
-                if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                    $this->auditEvent->rollbackTransaction();
+                $this->auditAtom->startTransaction();
+                $success = $this->auditAtom->saveAuditEvent($auditAtoms, $userId);
+                if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                    $this->auditAtom->rollbackTransaction();
                 } else {
-                    $this->auditEvent->commitTransaction();
+                    $this->auditAtom->commitTransaction();
                 }
             }
         } while ($failedTransaction && ($transactionRetryCount > 0));
@@ -844,6 +808,11 @@ class Course_Management extends Ilios_Web_Controller
         echo json_encode($rhett);
     }
 
+    /**
+     * Expects the following POST parameters:
+     *     'course_id' ... the course identifier
+     *     'archive' ... boolean to archive or just lock
+    */
     public function lockCourse ()
     {
         $rhett = array();
@@ -856,8 +825,8 @@ class Course_Management extends Ilios_Web_Controller
 
         $userId = $this->session->userdata('uid');
 
-        $courseId = $this->input->get_post('course_id');
-        $archiveAlso = ($this->input->get_post('archive') == 'true');
+        $courseId = $this->input->post('course_id');
+        $archiveAlso = ($this->input->post('archive') == 'true');
 
         $failedTransaction = true;
         $transactionRetryCount = Ilios_Database_Constants::TRANSACTION_RETRY_COUNT;
@@ -879,12 +848,12 @@ class Course_Management extends Ilios_Web_Controller
                 $this->course->commitTransaction();
 
                 // save audit trail
-                $this->auditEvent->startTransaction();
-                $success = $this->auditEvent->saveAuditEvent($auditAtoms, $userId);
-                if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                    $this->auditEvent->rollbackTransaction();
+                $this->auditAtom->startTransaction();
+                $success = $this->auditAtom->saveAuditEvent($auditAtoms, $userId);
+                if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                    $this->auditAtom->rollbackTransaction();
                 } else {
-                    $this->auditEvent->commitTransaction();
+                    $this->auditAtom->commitTransaction();
                 }
 
                 $failedTransaction = false;
@@ -897,6 +866,12 @@ class Course_Management extends Ilios_Web_Controller
         echo json_encode($rhett);
     }
 
+
+
+    /**
+     * Expects the following POST parameters:
+     *     'course_id' ... the course identifier
+    */
     public function getLearnerGroupIdsAndTitles ()
     {
         $rhett = array();
@@ -907,7 +882,7 @@ class Course_Management extends Ilios_Web_Controller
             return;
         }
 
-        $courseId = $this->input->get_post('course_id');
+        $courseId = $this->input->post('course_id');
 
         $rhett['learners'] = $this->queries->getLearnerGroupIdAndTitleForCourse($courseId);
 
@@ -991,12 +966,6 @@ class Course_Management extends Ilios_Web_Controller
             return;
         }
         try {
-            $learningMaterials = Ilios_Json::deserializeJsonArray($this->input->post('learning_materials'), true);
-        } catch (Ilios_Exception $e) {
-            $this->_printErrorXhrResponse('course_management.error.session_save.input_validation.learning_materials');
-            return;
-        }
-        try {
             $objectives = Ilios_Json::deserializeJsonArray($this->input->post('objective'), true);
         } catch (Ilios_Exception $e) {
             $this->_printErrorXhrResponse('course_management.error.session_save.input_validation.objectives');
@@ -1034,11 +1003,7 @@ class Course_Management extends Ilios_Web_Controller
 
         $description = Ilios_CharEncoding::utf8UrlDecode($this->input->post('description'));
 
-        $learningMaterials = $this->_formatSessionLearningMaterialsFromInput($learningMaterials);
-
-        //
         // input processing
-        //
         $failedTransaction = true;
         $transactionRetryCount = Ilios_Database_Constants::TRANSACTION_RETRY_COUNT;
         do {
@@ -1094,8 +1059,7 @@ class Course_Management extends Ilios_Web_Controller
                                                                $disciplines, $meshTerms,
                                                                $objectives, $supplemental,
                                                                $attireRequired, $equipmentRequired,
-                                                               $publishId, $description,
-                                                               $learningMaterials, $ilmId,
+                                                               $publishId, $description, $ilmId,
                                                                $auditAtoms);
                 }
                 else {
@@ -1104,8 +1068,7 @@ class Course_Management extends Ilios_Web_Controller
                                                                   $meshTerms, $objectives,
                                                                   $supplemental, $attireRequired,
                                                                   $equipmentRequired, $publishId,
-                                                                  $publishAsTBD, $description,
-                                                                  $learningMaterials, $ilmId,
+                                                                  $publishAsTBD, $description, $ilmId,
                                                                   $auditAtoms);
                 }
 
@@ -1137,12 +1100,12 @@ class Course_Management extends Ilios_Web_Controller
                     $this->iliosSession->commitTransaction();
 
                     // save audit trail
-                    $this->auditEvent->startTransaction();
-                    $success = $this->auditEvent->saveAuditEvent($auditAtoms, $userId);
-                    if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                        $this->auditEvent->rollbackTransaction();
+                    $this->auditAtom->startTransaction();
+                    $success = $this->auditAtom->saveAuditEvent($auditAtoms, $userId);
+                    if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                        $this->auditAtom->rollbackTransaction();
                     } else {
-                        $this->auditEvent->commitTransaction();
+                        $this->auditAtom->commitTransaction();
                     }
 
                     /*
@@ -1182,7 +1145,7 @@ class Course_Management extends Ilios_Web_Controller
     }
 
     /**
-     * Expected params:
+     * Expected POST params:
      *      session_id
      *      cnumber
      *
@@ -1201,8 +1164,8 @@ class Course_Management extends Ilios_Web_Controller
 
         $userId = $this->session->userdata('uid');
 
-        $sessionId = $this->input->get_post('session_id');
-        $containerNumber = $this->input->get_post('cnumber');
+        $sessionId = $this->input->post('session_id');
+        $containerNumber = $this->input->post('cnumber');
 
         $failedTransaction = true;
         $transactionRetryCount = Ilios_Database_Constants::TRANSACTION_RETRY_COUNT;
@@ -1234,12 +1197,12 @@ class Course_Management extends Ilios_Web_Controller
                     $failedTransaction = false;
 
                     // save audit trail
-                    $this->auditEvent->startTransaction();
-                    $success = $this->auditEvent->saveAuditEvent($auditAtoms, $userId);
-                    if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                        $this->auditEvent->rollbackTransaction();
+                    $this->auditAtom->startTransaction();
+                    $success = $this->auditAtom->saveAuditEvent($auditAtoms, $userId);
+                    if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                        $this->auditAtom->rollbackTransaction();
                     } else {
-                        $this->auditEvent->commitTransaction();
+                        $this->auditAtom->commitTransaction();
                     }
 
                     $rhett['container'] = $containerNumber;
@@ -1374,12 +1337,12 @@ class Course_Management extends Ilios_Web_Controller
                 $this->offering->commitTransaction();
 
                 // save audit trail
-                $this->auditEvent->startTransaction();
-                $success = $this->auditEvent->saveAuditEvent($auditAtoms, $userId);
-                if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                    $this->auditEvent->rollbackTransaction();
+                $this->auditAtom->startTransaction();
+                $success = $this->auditAtom->saveAuditEvent($auditAtoms, $userId);
+                if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                    $this->auditAtom->rollbackTransaction();
                 } else {
-                    $this->auditEvent->commitTransaction();
+                    $this->auditAtom->commitTransaction();
                 }
             }
         }
@@ -1394,9 +1357,12 @@ class Course_Management extends Ilios_Web_Controller
         echo json_encode($rhett);
     }
 
+
+
     /**
-     * (non-PHPdoc)
-     */
+     * Expects the following GET parameters:
+     *     'course_id' ... the course identifier
+    */
     public function getCourseTree ()
     {
         // authorization check
@@ -1405,7 +1371,7 @@ class Course_Management extends Ilios_Web_Controller
             return;
         }
 
-        $courseId = $this->input->get_post('course_id');
+        $courseId = $this->input->get('course_id');
 
         $rhett = $this->_buildCourseTree($courseId, false, false);
 

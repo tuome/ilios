@@ -24,14 +24,13 @@ class Offering_Management extends Ilios_Web_Controller
     }
 
     /**
-     * Required POST or GET parameters:
+     * Required GET parameters:
      *      session_id          (session id)
+     *      start_date
      */
     public function index ()
     {
         $data = array();
-        $data['institution_name'] = $this->config->item('ilios_institution_name');
-        $data['user_id'] = $this->session->userdata('uid');
 
         if (!$this->session->userdata('has_instructor_access')) {
             $this->_viewAccessForbiddenPage($data);
@@ -41,11 +40,9 @@ class Offering_Management extends Ilios_Web_Controller
         $this->output->set_header('Expires: 0');
 
 
-        $data['session_id'] = (int) $this->input->get_post('session_id');
+        $data['session_id'] = (int) $this->input->get('session_id');
 
-        $userRow = $this->user->getRowForPrimaryKeyId($data['user_id']);
-
-        $data['viewbar_title'] = $data['institution_name'];
+        $data['viewbar_title'] = $this->config->item('ilios_institution_name');
 
         $schoolId =  $this->session->userdata('school_id');
         $schoolRow = $this->school->getRowForPrimaryKeyId($schoolId);
@@ -184,7 +181,7 @@ class Offering_Management extends Ilios_Web_Controller
             $data['course_start_date'] = $titles['course_start_date'];
         }
 
-        $data['calendar_start_date'] = $this->input->get_post('start_date', true);
+        $data['calendar_start_date'] = $this->input->get('start_date', true);
         if (false === $data['calendar_start_date']) {
             $data['calendar_start_date'] = $data['course_start_date'];
         }
@@ -212,7 +209,7 @@ class Offering_Management extends Ilios_Web_Controller
 
     /**
      * Adds or updates a session offering, based on posted user input.
-     * Expected parameters:
+     * Expected POST parameters:
      *      . sid           session id
      *      . start_date
      *      . end_date
@@ -241,7 +238,7 @@ class Offering_Management extends Ilios_Web_Controller
             return;
         }
 
-        $sessionId = $this->input->get_post('sid');
+        $sessionId = $this->input->post('sid');
         $sessionIsPublished = $this->iliosSession->isPublished($sessionId);
 
         $school = $this->school->getSchoolBySessionId($sessionId);
@@ -259,31 +256,31 @@ class Offering_Management extends Ilios_Web_Controller
 
         $userId = $this->session->userdata('uid');
 
-        $calendarId = $this->input->get_post('calendar_id');
+        $calendarId = $this->input->post('calendar_id');
 
-        $startDate = $this->input->get_post('start_date');
-        $endDate = $this->input->get_post('end_date');
+        $startDate = $this->input->post('start_date');
+        $endDate = $this->input->post('end_date');
 
-        $location = $this->input->get_post('location');
+        $location = $this->input->post('location');
 
-        $instructorArray = json_decode(rawurldecode($this->input->get_post('instructors')), true);
-        $studentGroupIds = explode(',', $this->input->get_post('student_group_ids'));
+        $instructorArray = json_decode(rawurldecode($this->input->post('instructors')), true);
+        $studentGroupIds = explode(',', $this->input->post('student_group_ids'));
 
-        $offeringId = $this->input->get_post('offering_id');
+        $offeringId = $this->input->post('offering_id');
         if (($offeringId == '') || ($offeringId == -1)) {
             $offeringId = null;
         }
 
         $recurringEvent = null;
         $recurringEventAdded = false;
-        if ($this->input->get_post('is_recurring') == 'true') {
-            $recurringEvent = json_decode(rawurldecode($this->input->get_post('recurring_event')),
+        if ($this->input->post('is_recurring') == 'true') {
+            $recurringEvent = json_decode(rawurldecode($this->input->post('recurring_event')),
                                           true);
 
             $recurringEventAdded = ($recurringEvent['dbId'] == -1);
         }
 
-        $publishEventId = $this->input->get_post('parent_publish_event_id');
+        $publishEventId = $this->input->post('parent_publish_event_id');
 
         $rhett['calendar_id'] = $calendarId;
 
@@ -394,12 +391,12 @@ class Offering_Management extends Ilios_Web_Controller
                 $this->offering->commitTransaction();
 
                 // save audit trail
-                $this->auditEvent->startTransaction();
-                $success = $this->auditEvent->saveAuditEvent($auditAtoms, $userId);
-                if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                    $this->auditEvent->rollbackTransaction();
+                $this->auditAtom->startTransaction();
+                $success = $this->auditAtom->saveAuditEvent($auditAtoms, $userId);
+                if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                    $this->auditAtom->rollbackTransaction();
                 } else {
-                    $this->auditEvent->commitTransaction();
+                    $this->auditAtom->commitTransaction();
                 }
             }
         } while ($failedTransaction && ($transactionRetryCount > 0));
@@ -460,7 +457,7 @@ class Offering_Management extends Ilios_Web_Controller
     }
 
     /**
-     * Expected parameters:
+     * Expected POST parameters:
      *      . oid           offering id
      *      . calendar_id
      *
@@ -478,9 +475,9 @@ class Offering_Management extends Ilios_Web_Controller
 
         $userId = $this->session->userdata('uid');
 
-        $offeringId = $this->input->get_post('oid');
+        $offeringId = $this->input->post('oid');
 
-        $calendarId = $this->input->get_post('calendar_id');
+        $calendarId = $this->input->post('calendar_id');
 
         $rhett['calendar_id'] = $calendarId;
 
@@ -507,12 +504,12 @@ class Offering_Management extends Ilios_Web_Controller
                 $failedTransaction = false;
 
                 // save audit trail
-                $this->auditEvent->startTransaction();
-                $success = $this->auditEvent->saveAuditEvent($auditAtoms, $userId);
-                if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                    $this->auditEvent->rollbackTransaction();
+                $this->auditAtom->startTransaction();
+                $success = $this->auditAtom->saveAuditEvent($auditAtoms, $userId);
+                if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                    $this->auditAtom->rollbackTransaction();
                 } else {
-                    $this->auditEvent->commitTransaction();
+                    $this->auditAtom->commitTransaction();
                 }
             }
         }
@@ -523,7 +520,7 @@ class Offering_Management extends Ilios_Web_Controller
     }
 
     /**
-     * Expected parameters:
+     * Expected POST parameters:
      *      . course_id
      *
      * @return a JSON'd array with the key 'error' if an error occurred, else an array of offering
@@ -542,7 +539,7 @@ class Offering_Management extends Ilios_Web_Controller
 
         $offeringArray = array();
 
-        $courseId = $this->input->get_post('course_id');
+        $courseId = $this->input->post('course_id');
         $sessions = $this->iliosSession->getSimplifiedSessionsForCourse($courseId);
         foreach ($sessions as $session) {
             $offerings = $this->offering->getOfferingsForSession($session['session_id'],
@@ -576,7 +573,7 @@ class Offering_Management extends Ilios_Web_Controller
     }
 
     /**
-     * Expected parameters:
+     * Expected POST parameters:
      *      . session_id
      *
      * @return a JSON'd array with the key 'error' if an error occurred, else an array of instructor
@@ -593,7 +590,7 @@ class Offering_Management extends Ilios_Web_Controller
             return;
         }
 
-        $sessionId = $this->input->get_post('session_id');
+        $sessionId = $this->input->post('session_id');
 
         // @todo running queries per line item is inefficient, build a better solution to this. [ST 2013/11/06]
         $instructors = $this->iliosSession->getInstructorsForSession($sessionId);
@@ -615,7 +612,7 @@ class Offering_Management extends Ilios_Web_Controller
     }
 
     /**
-     * Expected parameters:
+     * Expected POST parameters:
      *      . session_id
      *
      * @return a JSON'd array with the key 'error' if an error occurred, else an array of student
@@ -632,18 +629,18 @@ class Offering_Management extends Ilios_Web_Controller
             return;
         }
 
-        $sessionId = $this->input->get_post('session_id');
+        $sessionId = $this->input->post('session_id');
 
         // @todo replace inefficient code that queries in loop. [ST 2013/11/13]
         $learners =  $this->iliosSession->getLearnersForSession($sessionId);
         for ($i = 0, $n = count($learners); $i < $n; $i++) {
             $learners[$i]['offerings'] =
-                $this->offering->getOtherOfferingsForInstructor($sessionId, $learners[$i]['user_id']);
+                $this->offering->getOtherOfferingsForLearner($sessionId, $learners[$i]['user_id']);
         }
         $learnerGroups = $this->iliosSession->getLearnerGroupsForSession($sessionId);
         for ($i = 0, $n = count($learnerGroups); $i < $n; $i++) {
             $learnerGroups[$i]['offerings'] =
-                $this->offering->getOtherOfferingsForInstructorGroup($sessionId, $learnerGroups[$i]['group_id']);
+                $this->offering->getOtherOfferingsForLearnerGroup($sessionId, $learnerGroups[$i]['group_id']);
         }
         $rhett['learners'] = array_merge($learners, $learnerGroups);
 
@@ -659,7 +656,7 @@ class Offering_Management extends Ilios_Web_Controller
      *      an offering in session B), the inspector pane needs certain extra information concerning
      *      a session. This returns that.
      *
-     * Expected params:
+     * Expected POST params:
      *      . session_id
      *
      * @return a JSON'd array with either one key ('error'), or the following keys:
@@ -681,7 +678,7 @@ class Offering_Management extends Ilios_Web_Controller
         }
 
         // todo error cases
-        $sessionId = $this->input->get_post('session_id');
+        $sessionId = $this->input->post('session_id');
 
         $sessionRow = $this->iliosSession->getRowForPrimaryKeyId($sessionId);
         $rhett['special_equipment'] = $sessionRow->equipment_required;

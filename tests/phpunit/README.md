@@ -1,28 +1,40 @@
 # Installing PHPUnit
- 
-You will need to install PHPUnit (version 3.6.10 or later) and DbUnit
- 
+
+You will need to install PHPUnit and DbUnit. We recommend doing so via [Composer](http://getcomposer.org).
+
+```bash
+cd <iliosroot>/tests/phpunit
+composer install
 ```
-sudo pear config-set auto_discover 1
-sudo pear install pear.phpunit.de/PHPUnit
-sudo pear install phpunit/DbUnit
-```
- 
-See the [official manual](http://www.phpunit.de/manual/current/en/installation.html#installation.pear) for more details.
- 
+
+See the [official PHPUnit manual](http://phpunit.de/manual/current/en/installation.html#installation.composer) for more details.
+
 # Configuring the test environment
- 
-1. In the `tests/phpunit` directory, copy `default.phpunit.xml` to `phpunit.xml`. 
-2. Set up a new Ilios database `ilios_test` using the scripts in the `/database/install` directory.
-3. Edit `phpunit.xml` to customize it for your environment.   
+
+## Common steps
+
+1. In the `tests/phpunit` directory, copy `default.phpunit.xml` to `phpunit.xml`.
+
+## Unit tests
+
+No additional configuration steps are required.
+
+## End-to-end tests
+
+For full end-to-end testing, an Ilios database is expected to be present and accessible.
+
+See the following additional configuration steps:
+
+1. Set up a new Ilios database `ilios_test` using the scripts in the `/database/install` directory.
+2. Edit `phpunit.xml` to customize it for your environment.
 Note that the value for `ILIOS2_TEST_DB_ACTIVE_GROUP` will be the name of a new DB group that you will create in the next step.
 ```xml
 <!--  name of the CI db group configuration which should be used for testing -->
 <const name="ILIOS2_TEST_DB_ACTIVE_GROUP" value="ilios_test" />
 ```
 
-4. Add a new DB group named `ilios_test` to your `application/config/database.php` file. Point it to the new `ilios_test` database that you created earlier, then set `$active_group` to `ilios_test`.
- 
+3. Add a new DB group named `ilios_test` to your `application/config/database.php` file. Point it to the new `ilios_test` database that you created earlier, then set `$active_group` to `ilios_test`.
+
 ```php
 <?php
 if ( ! defined('BASEPATH')) exit('No direct script access allowed');
@@ -47,13 +59,51 @@ $db['ilios_test']['autoinit'] = TRUE;
 $db['ilios_test']['stricton'] = FALSE;
 ```
 
-**ACHTUNG!**
-Do not run this these tests against your regular development, stage or production database, otherwise it will get clobbered.
- 
-# Running tests
- 
-Change to @tests/phpunit@ directory and run this command:
- 
+## Integration tests
+
+_Relevant to UCSF only!_
+
+Ilios provides tests for its built-in LDAP client that is used to query UCSF's campus directory (EDS).
+
+In order to run these, you will need to provide actual values for the various `ILIOS_TEST_USER_SYNC_EDS_*`
+configuration options defined in the phpunit configuration file.
+
+
+```xml
+<!--  LDAP/EDS configuration for user sync process tests -->
+<const name="ILIOS_TEST_USER_SYNC_EDS_BIND_DN" value="XXXXX" />
+<const name="ILIOS_TEST_USER_SYNC_EDS_PASSWORD" value="XXXXX" />
+<const name="ILIOS_TEST_USER_SYNC_EDS_HOST" value="ldaps://XXXXX" />
+<const name="ILIOS_TEST_USER_SYNC_EDS_PORT" value="XXXXX" />
 ```
-$ phpunit .
+
+# Running tests
+
+## Unit tests
+
+Exclude the end-to-end and integration tests:
+
+```bash
+cd <iliosroot>/tests/phpunit
+bin/phpunit --exclude-group e2e,integration Ilios
+```
+
+## End-to-end tests
+
+**ACHTUNG!**  Do not run this these tests against your regular development, stage or production database, otherwise it will get clobbered.
+
+Only run tests in the `e2e` group.
+
+```bash
+cd <iliosroot>/tests/phpunit
+bin/phpunit  --group e2e Ilios
+```
+
+##  Integration tests
+
+Only run tests in the `integration` group.
+
+```bash
+cd <iliosroot>/tests/phpunit
+bin/phpunit  --group integration Ilios
 ```

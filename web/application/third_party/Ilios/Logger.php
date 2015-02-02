@@ -35,6 +35,12 @@ class Ilios_Logger
     const LOG_LEVEL_DEBUG = 'D';
 
     /**
+     * How big in bytes do log files need to be before they are rotated
+     * @var int 10MB
+     */
+    const LOG_FILE_ROTATE_SIZE = 10485760;
+
+    /**
      * Log file handle
      * @var resource
      */
@@ -61,11 +67,11 @@ class Ilios_Logger
      */
     static public function getInstance ($logFilePath)
     {
-    	if (! array_key_exists($logFilePath, self::$_registry)) {
-    		$logger = new Ilios_Logger($logFilePath);
-    		self::$_registry[$logFilePath] = $logger;
-    	}
-    	return self::$_registry[$logFilePath];
+        if (! array_key_exists($logFilePath, self::$_registry)) {
+            $logger = new Ilios_Logger($logFilePath);
+            self::$_registry[$logFilePath] = $logger;
+        }
+        return self::$_registry[$logFilePath];
 
     }
 
@@ -122,11 +128,11 @@ class Ilios_Logger
      */
     protected function _getLogFileHandle ($logFilePath)
     {
-    	$fh = @fopen($logFilePath, 'a');
-    	if (false === $fh) {
-    		throw new Ilios_Log_Exception('Could not open cron tasks log file ' . $logFilePath, Ilios_Log_Exception::OPENING_FILE_FAILED);
-    	}
-    	return $fh;
+        $fh = @fopen($logFilePath, 'a');
+        if (false === $fh) {
+            throw new Ilios_Log_Exception('Could not open log file ' . $logFilePath, Ilios_Log_Exception::OPENING_FILE_FAILED);
+        }
+        return $fh;
     }
 
     /**
@@ -140,14 +146,14 @@ class Ilios_Logger
      */
     protected function _writeToLogFile ($logFileHandle, $message, $processId = 0, $indentationLevel = 0, $logLevel = self::LOG_LEVEL_INFO)
     {
-    	$indent = str_repeat("  ", (int) $indentationLevel);
-    	$now = date('d/M/Y:H:i:s O'); // get the current datetime
-    	$out = "[{$now}][{$logLevel}]";
-    	if (! empty($processId)) {
-    	    $out .= "[p:{$processId}]";
-    	}
-    	$out .= "  {$indent}{$message}\n";
-    	return fwrite($logFileHandle, $out);
+        $indent = str_repeat("  ", (int) $indentationLevel);
+        $now = date('d/M/Y:H:i:s O'); // get the current datetime
+        $out = "[{$now}][{$logLevel}]";
+        if (! empty($processId)) {
+            $out .= "[p:{$processId}]";
+        }
+        $out .= "  {$indent}{$message}\n";
+        return fwrite($logFileHandle, $out);
     }
 
     /**
@@ -157,7 +163,7 @@ class Ilios_Logger
      */
     protected function _closeLogFile ($logFileHandle)
     {
-    	return fclose($logFileHandle);
+        return fclose($logFileHandle);
     }
 
     /**
@@ -182,7 +188,7 @@ class Ilios_Logger
      */
     public function warn ($message, $processId = 0, $indentationLevel = 0)
     {
-    	$this->log($message, $processId, $indentationLevel, self::LOG_LEVEL_WARN);
+        $this->log($message, $processId, $indentationLevel, self::LOG_LEVEL_WARN);
     }
 
     /**
@@ -195,7 +201,7 @@ class Ilios_Logger
      */
     public function error ($message, $processId = 0, $indentationLevel = 0)
     {
-    	$this->log($message, $processId, $indentationLevel, self::LOG_LEVEL_ERROR);
+        $this->log($message, $processId, $indentationLevel, self::LOG_LEVEL_ERROR);
     }
 
     /**
@@ -208,6 +214,47 @@ class Ilios_Logger
      */
     public function debug ($message, $processId = 0, $indentationLevel = 0)
     {
-    	$this->log($message, $processId, $indentationLevel, self::LOG_LEVEL_DEBUG);
+        $this->log($message, $processId, $indentationLevel, self::LOG_LEVEL_DEBUG);
+    }
+
+    /**
+     * Rotate and compress the log file if it has grown large enough
+     */
+    public function rotate()
+    {
+        fflush($this->_logFileHandle);
+        if(filesize($this->_logFilePath) > self::LOG_FILE_ROTATE_SIZE){
+            $now = new DateTime('now', new DateTimeZone('UTC'));
+            $pathParts = pathinfo($this->_logFilePath);
+
+            $newPath = $pathParts['dirname'] . DIRECTORY_SEPARATOR .
+                       $pathParts['filename'] . '-' .
+                       $now->format('Y-m-d');
+            $newPath .= array_key_exists('extension', $pathParts)?'.' . $pathParts['extension']:'';
+
+            //ensure we don't overwirte an existing file
+            $i = 1;
+            while(file_exists($newPath . '.gz')){
+                $newPath .= '-' . $i;
+                $i++;
+            }
+            $newPath .= '.gz';
+
+            if ($fout = gzopen($newPath, 'wb9')) {
+                if ($fin = fopen($this->_logFilePath,'r')) {
+                    while (!feof($fin)){
+                        gzwrite($fout, fread($fin, 1024 * 512));
+                    }
+                    fclose($fin);
+                }
+                gzclose($fout);
+            }
+
+            ftruncate($this->_logFileHandle, 0);
+            rewind($this->_logFileHandle);
+            return $newPath;
+        }
+
+        return false;
     }
 }

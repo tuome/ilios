@@ -91,4 +91,23 @@ class Ilios_PasswordUtilsTest extends Ilios_TestCase
         $actual = Ilios_PasswordUtils::hashPassword($password, $salt);
         $this->assertEquals($actual, $expected);
     }
+
+    /**
+     * @test
+     * @covers Ilios_PasswordUtils::generateToken
+     */
+    public function testGenerateToken ()
+    {
+        $token = Ilios_PasswordUtils::generateToken();
+        $token2 = Ilios_PasswordUtils::generateToken();
+
+        // shouldn't generate the same token
+        $this->assertNotEquals($token, $token2);
+
+        // 40 char length.
+        $this->assertEquals(strlen($token), 64);
+
+        // check if the key contains only (lowercase) hexadecimal chars
+        $this->assertEquals(preg_match('/^[\da-f]+$/', $token), 1);
+    }
 }

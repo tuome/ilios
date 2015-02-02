@@ -17,7 +17,7 @@ $viewsPath = getServerFilePath('views');
     <meta name="description" content="">
 
     <!-- Mobile viewport optimized: h5bp.com/viewport -->
-    <meta name="viewport" content="width=device-width">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- Place favicon.ico and apple-touch-icon.png in the root directory: mathiasbynens.be/notes/touch-icons -->
     <link rel="stylesheet" href="<?php echo appendRevision($viewsUrlRoot . "css/ilios-styles.css"); ?>" media="all">
@@ -26,6 +26,8 @@ $viewsPath = getServerFilePath('views');
     <style type="text/css"></style>
 
     <!-- More ideas for your <head> here: h5bp.com/d/head-Tips -->
+
+    <?php include_once $viewsPath . 'common/google_analytics.inc.php'; ?>
 
     <!--[if lt IE 9]>
     <script src="<?php echo $viewsUrlRoot; ?>scripts/third_party/html5shiv.js"></script>
@@ -39,14 +41,17 @@ $viewsPath = getServerFilePath('views');
     <!-- Ilios JS -->
     <script type="text/javascript" src="<?php echo $controllerURL; ?>/getI18NJavascriptVendor"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_base.js"); ?>"></script>
-    <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/models/preferences_model.js"); ?>"></script>
+    <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_alert.js"); ?>"></script>
+    <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_preferences.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_utilities.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_ui.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_ui_rte.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_dom.js"); ?>"></script>
+    <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/ilios_timer.js"); ?>"></script>
     <script type="text/javascript">
         var controllerURL = "<?php echo $controllerURL; ?>/";
-        var currentUserId = "<?php echo $user_id; ?>";
+        <?php // @todo YEAH, if we could go ahead and stop doing this [v], that would be great. Ok? Thanks. [ST 2014/02/20] ?>
+        var currentUserId = "<?php echo $this->session->userdata('uid'); ?>";
         var offeringControllerURL = "<?php echo $offeringControllerURL; ?>";
         var learningMaterialsControllerURL = "<?php echo $learningMaterialsControllerURL; ?>/";
         var adminUserDisplayName = "<?php echo $admin_user_short_name; ?>";
@@ -87,6 +92,8 @@ $viewsPath = getServerFilePath('views');
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "course/multipurpose_session_lightbox_support.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/models/mesh_item_model.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo appendRevision($viewsUrlRoot . "scripts/mesh_base_framework.js"); ?>"></script>
+    <?php include_once $viewsPath . 'common/set_user_preferences.inc.php'; ?>
+    <?php include_once $viewsPath . 'common/start_idle_page_timer.inc.php'; ?>
 </head>
 <body class="course yui-skin-sam">
     <div id="wrapper">
@@ -117,6 +124,7 @@ $viewsPath = getServerFilePath('views');
     <div id="view-menu"></div>
     <div id="date_picking_calendar_container" style="z-index: 10999;"></div>
     <div class="tabdialog" id="cohort_pick_dialog"></div>    <!-- edit session description dialog -->
+    <div class="tabdialog" id="discipline_picker_dialog"></div>
 <?php
     include $viewsPath . 'common/course_summary_view_include.php';
     include $viewsPath . 'common/mesh_picker_include.php';
@@ -125,7 +133,6 @@ $viewsPath = getServerFilePath('views');
     include 'add_learning_materials_dialog.php';
     include 'archiving_dialog.php';
     include 'course_search_include.php';
-    include 'discipline_include.php';
     include 'director_include.php';
     include 'edit_learning_material_notes_dialog.php';
     include 'edit_course_objective_dialog.php';
@@ -157,20 +164,13 @@ $viewsPath = getServerFilePath('views');
             window.inform = ilios.alert.inform;
         });
 
-        var tmpStr = '<?php echo $institution_name; ?> ' + ilios_i18nVendor.getI18NString('general.terms.programs');
         var sessionTypeModel = null;
 
 <?php
-    generateJavascriptRepresentationCodeOfPHPArray($preference_array, 'dbObjectRepresentation', false);
-?>
-        ilios.global.installPreferencesModel();
-        ilios.global.preferencesModel.updateWithServerDispatchedObject(dbObjectRepresentation);
-
-<?php
     include_once $viewsPath . 'common/load_school_competencies.inc.php';
-    include_once $viewsPath . 'common/start_idle_page_timer.inc.php';
 ?>
 
+        YAHOO.util.Event.onDOMReady(ilios.cm.setupCourseContainerUIComponents, {});
         YAHOO.util.Event.onDOMReady(ilios.cm.assembleArchivingDialog, {});
         YAHOO.util.Event.onDOMReady(ilios.cm.assembleRolloverDialog, {});
 
@@ -181,10 +181,11 @@ $viewsPath = getServerFilePath('views');
             hide_autocomplete_input : 'value matters not',
             submit_override : ilios.cm.handleProgramCohortDialogSubmit,
             widget_dom_generator : ilios.ui.programCohortDialogTreeDOMGenerator,
-            tab_title : ilios_i18nVendor.getI18NString('general.phrases.select_cohort'),
+            tab_title : ilios_i18nVendor.getI18NString('general.phrases.available_cohorts'),
             id_uniquer : 'scde_',
-            panel_title_text : tmpStr,
             dom_root : 'cohort_pick_dialog',
+            title: ilios_i18nVendor.getI18NString('course_management.select_cohorts'),
+            selected_items_title: ilios_i18nVendor.getI18NString('general.phrases.selected_cohorts'),
             deselect_handler : ilios.cm.handleProgramCohortDialogDeselection,
             max_displayed_results: 250,
             panel_width: '700px'
@@ -229,7 +230,7 @@ $viewsPath = getServerFilePath('views');
 
 
         YAHOO.util.Event.onDOMReady(function(type, args, obj) {
-            IEvent.subscribe(function (type, args) {
+            ilios.ui.onIliosEvent.subscribe(function (type, args) {
                 var updateRte = true;
                 if ('esd_dialog_open' === args[0].action) {
                     if (! ilios.cm.editSessionDescriptionDialog) {
@@ -239,11 +240,19 @@ $viewsPath = getServerFilePath('views');
                         updateRte = false;
                     }
                     ilios.cm.editSessionDescriptionDialog.setSessionModel(args[0].model, updateRte);
-                    ilios.cm.editSessionDescriptionDialog.setSessionModel(args[0].model);
                     ilios.cm.editSessionDescriptionDialog.center();
                     ilios.cm.editSessionDescriptionDialog.show();
                 }
             });
+        });
+
+        YAHOO.util.Event.onDOMReady(ilios.cm.disc_initDialog, {
+            // unique event that triggers opening of the dialog fired
+            // from search link near course mesh form element
+            trigger: "discipline_picker_show_dialog",
+            // unique id of the div where the dialog xhtml can be
+            // generated (once)
+            container: "discipline_picker_dialog"
         });
 
 <?php
@@ -251,7 +260,7 @@ $viewsPath = getServerFilePath('views');
 ?>
         sessionTypeModel = {};
         sessionTypeModel.dbId = <?php echo $sessionType['session_type_id']; ?>;
-        sessionTypeModel.title = '<?php echo $sessionType['title']; ?>';
+        sessionTypeModel.title = "<?php echo  preg_replace('/"/', '\\"', $sessionType['title']); ?>";
         ilios.cm.loadedSessionTypes.push(sessionTypeModel);
 <?php
     endforeach;
@@ -278,10 +287,24 @@ $viewsPath = getServerFilePath('views');
 ?>
         window.onbeforeunload = ilios.cm.windowWillClose;
 
+        YAHOO.util.Event.addListener(window, "load", function() {
+            var dataSource = new YAHOO.util.FunctionDataSource(ilios.cm.getCohortTableData);
+
+            dataSource.responseType = YAHOO.util.XHRDataSource.TYPE_JSARRAY;
+            dataSource.responseSchema = { fields: ["program", "cohort", "level"] };
+
+            ilios.cm.cohortDataTable
+                = new YAHOO.widget.DataTable("cohort_level_table_div",
+                ilios.cm.cohortTableColumnDefinitions,
+                dataSource,
+                { height: "80px"});
+        });
+
         // we do this instead of on dom ready because we have a dependency on the data table
         // being already created prior to course load and the data table (per Yahoo guidance)
         // gets created on window load, not on dom ready...
         YAHOO.util.Event.addListener(window, "load", ilios.cm.loadCourseIfAppropriate);
+
     </script>
 </body>
 </html>

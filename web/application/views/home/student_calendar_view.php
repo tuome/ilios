@@ -20,7 +20,7 @@ $viewsPath = getServerFilePath('views');
     <meta name="description" content="">
 
     <!-- Mobile viewport optimized: h5bp.com/viewport -->
-    <meta name="viewport" content="width=device-width">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- Place favicon.ico and apple-touch-icon.png in the root directory: mathiasbynens.be/notes/touch-icons -->
     <link rel="stylesheet" href="<?php echo appendRevision($viewsUrlRoot . "css/ilios-styles.css"); ?>" media="all">
@@ -30,14 +30,14 @@ $viewsPath = getServerFilePath('views');
     <style type="text/css"></style>
     <!-- More ideas for your <head> here: h5bp.com/d/head-Tips -->
 
+    <?php include_once $viewsPath . 'common/google_analytics.inc.php'; ?>
+
     <script type="text/javascript">
         var baseURL = "<?php echo $siteUrl; ?>/";
         var controllerURL = "<?php echo $controllerURL; ?>/";    // expose this to our javascript land
         var courseManagementURL = "<?php echo $courseManagementURL; ?>/";    // similarly...
         var learningMaterialsControllerURL = "<?php echo $learningMaterialsControllerURL; ?>/";    // ...
         var programManagementURL = "<?php echo $programManagementURL; ?>/";    // similarly...
-        var studentUserId = "<?php echo $user_id; ?>";        // similarly...
-
         var pageLoadedForStudent = true;
         var isCalendarView = true;
     </script>
@@ -75,10 +75,10 @@ endif;
                                 </span>
                             </li>
                             <li>
-                                <a href="<?php echo $siteUrl; ?>/calendar_exporter/exportICalendar/student" class="medium radius button" title="<?php echo $ical_download_title; ?>">
-                                    <span class="icon-download icon-alone"></span>
-                                    <span class="screen-reader-text"><?php echo $ical_download_button; ?></span>
-                                </a>
+                                <span id="ical_feed_btn" title="<?php echo t("dashboard.icalendar.feed_title", false); ?>" class="medium radius button">
+                                    <span class="icon-feed icon-alone"></span>
+                                    <span class="screen-reader-text"><?php echo t("dashboard.icalendar.feed_title"); ?></span>
+                                </span>
                             </li>
                         </ul>
                     </div>
@@ -117,6 +117,7 @@ endif;
 <?php
     include $viewsPath . 'common/course_summary_view_include.php';
     include $viewsPath . 'home/calendar_filters_dialog.inc.php';
+    include $viewsPath . 'home/calendar_feed_dialog.inc.php';
 ?>
     <div class="tabdialog" id="report_competency_pick_dialog"></div>
 
@@ -140,18 +141,12 @@ endif;
             window.alert = ilios.alert.alert;
             window.inform = ilios.alert.inform;
         });
-<?php
-    generateJavascriptRepresentationCodeOfPHPArray($preference_array, 'dbObjectRepresentation');
-?>
-        ilios.global.installPreferencesModel();
-        ilios.global.preferencesModel.updateWithServerDispatchedObject(dbObjectRepresentation);
-
 <?php include_once $viewsPath . 'common/load_school_competencies.inc.php'; ?>
-
         YAHOO.util.Event.onDOMReady(ilios.home.calendar.initCalendar);
         YAHOO.util.Event.onDOMReady(ilios.home.transaction.loadAllOfferings);
         YAHOO.util.Event.onDOMReady(ilios.home.calendar.assembleCalendarEventDetailsDialog);
         YAHOO.util.Event.onDOMReady(ilios.home.calendar.initFilterHooks);
+        YAHOO.util.Event.onDOMReady(ilios.home.calendar.initFeedHooks);
     </script>
 </body>
 </html>

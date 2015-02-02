@@ -31,8 +31,6 @@ class Management_Console extends Ilios_Web_Controller
     public function index ()
     {
         $data = array();
-        $data['institution_name'] = $this->config->item('ilios_institution_name');
-        $data['user_id'] = $this->session->userdata('uid');
 
         // authorization check
         if (! $this->session->userdata('has_admin_access')) {
@@ -41,7 +39,7 @@ class Management_Console extends Ilios_Web_Controller
         }
 
         // switch schools if instructed
-        $change_school = $this->input->get_post('schoolselect');
+        $change_school = $this->input->get('schoolselect');
         if ($change_school) {
             $this->_setActiveSchool($change_school);
         }
@@ -62,8 +60,7 @@ class Management_Console extends Ilios_Web_Controller
             $schoolTitle = $schoolRow->title;
         }
 
-        $institution = $this->config->item('ilios_institution_name');
-        $data['viewbar_title'] = $data['institution_name'];
+        $data['viewbar_title'] = $this->config->item('ilios_institution_name');
 
         // add school title (and school switcher if applicable) to viewbar
         if ($schoolTitle != null) {
@@ -105,7 +102,7 @@ class Management_Console extends Ilios_Web_Controller
                 // do nothing;
         }
 
-        $userRow = $this->user->getRowForPrimaryKeyId($data['user_id']);
+        $userRow = $this->user->getRowForPrimaryKeyId($this->session->userdata('uid'));
 
         $cohorts = $this->cohort->getProgramCohortsGroupedBySchool();
 
@@ -237,7 +234,7 @@ class Management_Console extends Ilios_Web_Controller
     /**
      * XHR callback handler.
      * Updates login credentials (username/password) for a given user.
-     * Expected input:
+     * Expected POST input:
      *     'user_id' ...the user id
      *     'username' ... the new login handle
      *     'password' ... the new password (optional)
@@ -257,9 +254,9 @@ class Management_Console extends Ilios_Web_Controller
         }
 
 
-        $userId = $this->input->get_post('user_id');
-        $username = $this->input->get_post('username');
-        $password = $this->input->get_post('password');
+        $userId = $this->input->post('user_id');
+        $username = $this->input->post('username');
+        $password = $this->input->post('password');
 
         // validate input
         if (! $userId) {
@@ -457,6 +454,10 @@ class Management_Console extends Ilios_Web_Controller
      * XHR callback handler.
      * Retrieves the program and course permissions for a requested user.
      * Prints out a JSON-formatted array of permissions.
+     *
+     * Expected POST input:
+     *     'user_id' ...the user id
+     *
      * @see Permission::getPermissionsForUser()
      */
     public function getUserPermissions ()
@@ -469,7 +470,7 @@ class Management_Console extends Ilios_Web_Controller
             return;
         }
 
-        $userId = $this->input->get_post('user_id');
+        $userId = $this->input->post('user_id');
 
         $rhett['permissions'] = $this->permission->getPermissionsForUser($userId);
 
@@ -482,6 +483,9 @@ class Management_Console extends Ilios_Web_Controller
      * Retrieves user attributes for a requested user.
      * Prints out a JSON-formatted array of attributes.
      * @see User::getAttributesForUser();
+     *
+     * Expected GET input:
+     *     'user_id' ...the user id
      */
     public function getUserAttributes ()
     {
@@ -493,7 +497,7 @@ class Management_Console extends Ilios_Web_Controller
             return;
         }
 
-        $userId = $this->input->get_post('user_id');
+        $userId = $this->input->get('user_id');
 
         $attributes = $this->user->getAttributesForUser($userId);
 
@@ -570,6 +574,12 @@ class Management_Console extends Ilios_Web_Controller
      * XHR callback handler.
      * Sets given permissions on a given program or course for one or several given users.
      * Prints out a JSON-formatted list of set permissions on success, or an error message on failure.
+     *
+     * Expected POST input:
+     *     'user_id' ...the user id
+     *     'ids'    ... array of table ids
+     *     'table_name' ... the permissions table we are working with
+     *     'replace'    ... boolean should we delete all existing permissions
      */
     public function setUserPermissions ()
     {
@@ -581,12 +591,12 @@ class Management_Console extends Ilios_Web_Controller
             return;
         }
 
-        $userId = $this->input->get_post('user_id');
-        $tableName = $this->input->get_post('table_name');
-        $replace = $this->input->get_post('replace') == 'true';
+        $userId = $this->input->post('user_id');
+        $tableName = $this->input->post('table_name');
+        $replace = $this->input->post('replace') == 'true';
 
         $tableIds = array();
-        $idStr = $this->input->get_post('ids');
+        $idStr = $this->input->post('ids');
         if ((! is_null($idStr)) && ($idStr != FALSE) && ($idStr != "")) {
             $tableIds = explode(",", $idStr);
         }
@@ -645,7 +655,17 @@ class Management_Console extends Ilios_Web_Controller
     }
 
     /**
-     * @todo add code docs
+     * XHR callback handler.
+     * Places users in their primary cohort
+     *
+     * This is only available when a user which was not previously a student is
+     * placed in the student role without being part of a learner group first.
+     * If you are creating these users in the DB you have to logout and back in
+     * and then visit the management console to see this option.
+     *
+     * Expected POST input:
+     *     'cohort_id' ...the cohort id
+     *     'users'    ... array of user information
      */
     public function performCohortAssociations ()
     {
@@ -657,8 +677,8 @@ class Management_Console extends Ilios_Web_Controller
             return;
         }
 
-        $users = json_decode(rawurldecode($this->input->get_post('users')), true);
-        $cohortId = $this->input->get_post('cohort_id');
+        $users = json_decode(rawurldecode($this->input->post('users')), true);
+        $cohortId = $this->input->post('cohort_id');
 
         $failedTransaction = true;
         $transactionRetryCount = Ilios_Database_Constants::TRANSACTION_RETRY_COUNT;
@@ -724,7 +744,7 @@ class Management_Console extends Ilios_Web_Controller
     /**
      * XHR handler.
      * Updates a user account.
-     * Expected input:
+     * Expected POST input:
      *     'user_id'
      *     'roles'
      *     'sync_ignored'
@@ -742,30 +762,30 @@ class Management_Console extends Ilios_Web_Controller
             return;
         }
 
-        $userId = $this->input->get_post('user_id');
+        $userId = $this->input->post('user_id');
         $shouldAffectSyncIgnore = false;
         $syncIgnore = false;
-        if ($this->input->get_post('sync_ignored')) {
+        if ($this->input->post('sync_ignored')) {
             $shouldAffectSyncIgnore = true;
-            $syncIgnore = ($this->input->get_post('sync_ignored') == 'y');
+            $syncIgnore = ($this->input->post('sync_ignored') == 'y');
         }
-        $rolesInput = $this->input->get_post('roles');
+        $rolesInput = $this->input->post('roles');
         $roleArray = array();
         if ($rolesInput) {
             $roleArray = explode(",", $rolesInput);
         }
 
         $secondaryCohortIds = array();
-        if ($this->input->get_post('secondary_cohorts')) {
-            $secondaryCohortIds = explode(",", $this->input->get_post('secondary_cohorts'));
+        if ($this->input->post('secondary_cohorts')) {
+            $secondaryCohortIds = explode(",", $this->input->post('secondary_cohorts'));
         }
 
         $shouldAffectEnable = false;
         $setToEnable = false;
 
-        if ($this->input->get_post('set_able')) {
+        if ($this->input->post('set_able')) {
             $shouldAffectEnable = true;
-            $setToEnable = ($this->input->get_post('set_able') == 'enable');
+            $setToEnable = ($this->input->post('set_able') == 'enable');
         }
 
         $failedTransaction = true;
@@ -786,7 +806,8 @@ class Management_Console extends Ilios_Web_Controller
                 $availableRoleSet = array(
                     User_Role::COURSE_DIRECTOR_ROLE_ID,
                     User_Role::DEVELOPER_ROLE_ID,
-                    User_Role::FACULTY_ROLE_ID
+                    User_Role::FACULTY_ROLE_ID,
+                    User_Role::FORMER_STUDENT_ROLE_ID
                 );
 
                 $unselectedRoles = array_diff($availableRoleSet, $roleArray);
@@ -866,7 +887,7 @@ class Management_Console extends Ilios_Web_Controller
 
         $allowedActions = array('ignore', 'disable', 'update');
 
-        $actionItems = json_decode(rawurldecode($this->input->get_post('users')), true);
+        $actionItems = json_decode(rawurldecode($this->input->post('users')), true);
 
         if (is_array($actionItems) && count($actionItems)) {
             $transactionRetryCount = Ilios_Database_Constants::TRANSACTION_RETRY_COUNT;
@@ -974,7 +995,7 @@ class Management_Console extends Ilios_Web_Controller
     /**
      * XHR handler.
      * Prints out an XML-formatted list of courses.
-     * Expects the following values to be POSTed:
+     * Expects the following GET values:
      * - 'query' ... a title/title-fragment to search courses by
      *
      */
@@ -986,7 +1007,7 @@ class Management_Console extends Ilios_Web_Controller
             return;
         }
 
-        $title = $this->input->get_post('query');
+        $title = $this->input->get('query');
         $schoolId = $this->session->userdata('school_id');
         $uid = $this->session->userdata('uid');
         $queryResults = $this->course->getCoursesFilteredOnTitleMatch($title, $schoolId, $uid);
@@ -1233,16 +1254,16 @@ class Management_Console extends Ilios_Web_Controller
             } else {
                 $this->user->commitTransaction();
 
-                $atoms[] = $this->auditEvent->wrapAtom($newUserId, 'user_id', 'user',
-                    Ilios_Model_AuditUtils::CREATE_EVENT_TYPE, 1);
+                $atoms[] = Ilios_Model_AuditUtils::wrapAuditAtom($newUserId, 'user_id', 'user',
+                    Ilios_Model_AuditUtils::CREATE_EVENT_TYPE);
 
                 // save audit trail
-                $this->auditEvent->startTransaction();
-                $success = $this->auditEvent->saveAuditEvent($atoms, $userId);
-                if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                    $this->auditEvent->rollbackTransaction();
+                $this->auditAtom->startTransaction();
+                $success = $this->auditAtom->saveAuditEvent($atoms, $userId);
+                if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                    $this->auditAtom->rollbackTransaction();
                 } else {
-                    $this->auditEvent->commitTransaction();
+                    $this->auditAtom->commitTransaction();
                 }
             }
         }
@@ -1283,17 +1304,17 @@ class Management_Console extends Ilios_Web_Controller
         } else {
             $this->user->commitTransaction();
 
-             $atoms[] = $this->auditEvent->wrapAtom($newUserId, 'user_id', 'user',
-                 Ilios_Model_AuditUtils::CREATE_EVENT_TYPE, 1);
+             $atoms[] = Ilios_Model_AuditUtils::wrapAuditAtom($newUserId, 'user_id', 'user',
+                 Ilios_Model_AuditUtils::CREATE_EVENT_TYPE);
 
 
             // save audit trail
-            $this->auditEvent->startTransaction();
-            $success = $this->auditEvent->saveAuditEvent($atoms, $userId);
-            if ($this->auditEvent->transactionAtomFailed() || ! $success) {
-                $this->auditEvent->rollbackTransaction();
+            $this->auditAtom->startTransaction();
+            $success = $this->auditAtom->saveAuditEvent($atoms, $userId);
+            if ($this->auditAtom->transactionAtomFailed() || ! $success) {
+                $this->auditAtom->rollbackTransaction();
             } else {
-                $this->auditEvent->commitTransaction();
+                $this->auditAtom->commitTransaction();
             }
         }
 

@@ -60,10 +60,40 @@ class Learning_Material extends Ilios_Base_Model
     }
 
     /**
+     * Retrieves a learning material (LM) record by its given pseudo key.
+     *
+     * @param string $token The pseudo key.
+     * @return boolean|array An associative array representing the LM record, or FALSE if none was found.
+     *
+     */
+    public function getByToken($token)
+    {
+        $rhett = false;
+        // exit early if falsy token was given.
+        if (empty($token)) {
+            return $rhett;
+        }
+
+        $clean = array();
+        $clean['token'] = $this->db->escape($token);
+
+        $sql = "SELECT * FROM `learning_material` WHERE `token` = {$clean['token']}";
+
+        $query = $this->db->query($sql);
+
+        if ($query->num_rows()) {
+            $rhett = $query->first_row('array');
+        }
+        $query->free_result();
+
+        return $rhett;
+    }
+
+    /**
      * For any title, filename, and/or description which match the match string, return the row as a
-     *  model in the returned array. Each model will contain 'learning_material_id', 'title',
-     *  'filename', 'filesize', 'upload_date', 'copyright_ownership',
-     *  'copyright_rationale', 'mime_type', 'owning_user_id' and 'owning_user_name'
+     * model in the returned array. Each model will contain 'learning_material_id', 'title',
+     * 'filename', 'filesize', 'upload_date', 'copyright_ownership',
+     * 'copyright_rationale', 'mime_type', 'owning_user_id' and 'owning_user_name'
      */
     public function getLearningMaterialsMatchingString ($matchString)
     {
@@ -355,7 +385,7 @@ EOL;
         $this->db->where('learning_material_id', $learningMaterialId);
         $queryResults = $this->db->get('session_learning_material');
         if ($queryResults->num_rows() > 0) {
-        	return $queryResults->first_row()->session_learning_material_id;
+            return $queryResults->first_row()->session_learning_material_id;
         }
         return null;
     }
@@ -445,10 +475,8 @@ EOL;
                         return false;
                     }
 
-                    array_push($auditAtoms,
-                               $this->auditEvent->wrapAtom($clmId, 'course_learning_material_id',
-                                                           'course_learning_material_x_mesh',
-                                                           Ilios_Model_AuditUtils::CREATE_EVENT_TYPE));
+                    $auditAtoms[] = Ilios_Model_AuditUtils::wrapAuditAtom($clmId, 'course_learning_material_id',
+                        'course_learning_material_x_mesh', Ilios_Model_AuditUtils::CREATE_EVENT_TYPE);
                 }
             }
         }
@@ -469,10 +497,8 @@ EOL;
                         return false;
                     }
 
-                    array_push($auditAtoms,
-                               $this->auditEvent->wrapAtom($slmId, 'session_learning_material_id',
-                                                           'session_learning_material_x_mesh',
-                                                           Ilios_Model_AuditUtils::CREATE_EVENT_TYPE));
+                    $auditAtoms[] = Ilios_Model_AuditUtils::wrapAuditAtom($slmId, 'session_learning_material_id',
+                        'session_learning_material_x_mesh', Ilios_Model_AuditUtils::CREATE_EVENT_TYPE);
                 }
             }
         }
@@ -507,11 +533,9 @@ EOL;
                     return false;
                 }
 
-                array_push($auditAtoms,
-                           $this->auditEvent->wrapAtom($row['course_learning_material_id'],
-                                                       'course_learning_material_id',
-                                                       'course_learning_material_x_mesh',
-                                                       Ilios_Model_AuditUtils::DELETE_EVENT_TYPE));
+                $auditAtoms[] = Ilios_Model_AuditUtils::wrapAuditAtom($row['course_learning_material_id'],
+                    'course_learning_material_id', 'course_learning_material_x_mesh',
+                    Ilios_Model_AuditUtils::DELETE_EVENT_TYPE);
             }
 
             if (! $meshOnly) {
@@ -526,10 +550,8 @@ EOL;
                     return false;
                 }
 
-                array_push($auditAtoms,
-                           $this->auditEvent->wrapAtom($dbId, 'course_id',
-                                                       'course_learning_material',
-                                                       Ilios_Model_AuditUtils::DELETE_EVENT_TYPE));
+                $auditAtoms[] = Ilios_Model_AuditUtils::wrapAuditAtom($dbId, 'course_id', 'course_learning_material',
+                    Ilios_Model_AuditUtils::DELETE_EVENT_TYPE);
             }
         }
         else {
@@ -543,11 +565,9 @@ EOL;
                     return false;
                 }
 
-                array_push($auditAtoms,
-                           $this->auditEvent->wrapAtom($row['session_learning_material_id'],
-                                                       'session_learning_material_id',
-                                                       'session_learning_material_x_mesh',
-                                                       Ilios_Model_AuditUtils::DELETE_EVENT_TYPE));
+                $auditAtoms[] = Ilios_Model_AuditUtils::wrapAuditAtom($row['session_learning_material_id'],
+                    'session_learning_material_id', 'session_learning_material_x_mesh',
+                    Ilios_Model_AuditUtils::DELETE_EVENT_TYPE);
             }
 
             if (! $meshOnly) {
@@ -562,10 +582,8 @@ EOL;
                     return false;
                 }
 
-                array_push($auditAtoms,
-                           $this->auditEvent->wrapAtom($dbId, 'session_id',
-                                                       'session_learning_material',
-                                                       Ilios_Model_AuditUtils::DELETE_EVENT_TYPE));
+                $auditAtoms[] = Ilios_Model_AuditUtils::wrapAuditAtom($dbId, 'session_id', 'session_learning_material',
+                    Ilios_Model_AuditUtils::DELETE_EVENT_TYPE);
             }
         }
 
@@ -589,10 +607,8 @@ EOL;
         $updatedRow['learning_material_status_id'] = $statusId;
         $this->db->update($this->databaseTableName, $updatedRow);
 
-        array_push($auditAtoms, $this->auditEvent->wrapAtom($learningMaterialId,
-                                                            'learning_material_id',
-                                                            $this->databaseTableName,
-                                                            Ilios_Model_AuditUtils::UPDATE_EVENT_TYPE, 1));
+        $auditAtoms[] = Ilios_Model_AuditUtils::wrapAuditAtom($learningMaterialId, 'learning_material_id',
+            $this->databaseTableName, Ilios_Model_AuditUtils::UPDATE_EVENT_TYPE);
 
         if (($this->db->affected_rows() == 0) || $this->transactionAtomFailed()) {
             $msg = $this->languagemap->getI18NString('general.error.db_insert');
@@ -612,7 +628,7 @@ EOL;
                                                   $filesize, $haveCopyrightOwnership,
                                                   $copyrightRationale, $description, $statusId,
                                                   $creator, $ownerRoleId, $courseId, $sessionId,
-                                                  $userId, &$auditAtoms)
+                                                  $userId, $token, &$auditAtoms)
     {
         $newRow = array();
         $newRow['learning_material_id'] = null;
@@ -633,6 +649,7 @@ EOL;
         $newRow['description'] = $description;
         $newRow['learning_material_status_id'] = $statusId;
         $newRow['learning_material_user_role_id'] = $ownerRoleId;
+        $newRow['token'] = $token;
 
         $this->db->insert($this->databaseTableName, $newRow);
         $newId = $this->db->insert_id();
@@ -649,9 +666,8 @@ EOL;
                 }
             }
 
-            array_push($auditAtoms, $this->auditEvent->wrapAtom($newId, 'learning_material_id',
-                                                                $this->databaseTableName,
-                                                                Ilios_Model_AuditUtils::CREATE_EVENT_TYPE, 1));
+            $auditAtoms[] = Ilios_Model_AuditUtils::wrapAuditAtom($newId, 'learning_material_id',
+                $this->databaseTableName, Ilios_Model_AuditUtils::CREATE_EVENT_TYPE);
         }
         else {
             $newId = -1;
@@ -666,7 +682,7 @@ EOL;
      * @return the learning material id, or -1 on failure
      */
     public function storeLinkLearningMaterialMeta ($title, $link, $description, $statusId, $creator,
-                                            $ownerRoleId, $courseId, $sessionId, $userId, &$auditAtoms)
+                                            $ownerRoleId, $courseId, $sessionId, $userId, $token, &$auditAtoms)
     {
         $newRow = array();
         $newRow['learning_material_id'] = null;
@@ -686,6 +702,7 @@ EOL;
         $newRow['description'] = $description;
         $newRow['learning_material_status_id'] = $statusId;
         $newRow['learning_material_user_role_id'] = $ownerRoleId;
+        $newRow['token'] = $token;
 
         $this->db->insert($this->databaseTableName, $newRow);
         $newId = $this->db->insert_id();
@@ -702,9 +719,8 @@ EOL;
                 }
             }
 
-            array_push($auditAtoms, $this->auditEvent->wrapAtom($newId, 'learning_material_id',
-                                                                $this->databaseTableName,
-                                                                Ilios_Model_AuditUtils::CREATE_EVENT_TYPE, 1));
+            $auditAtoms[] = Ilios_Model_AuditUtils::wrapAuditAtom($newId, 'learning_material_id',
+                $this->databaseTableName, Ilios_Model_AuditUtils::CREATE_EVENT_TYPE);
         }
         else {
             $newId = -1;
@@ -721,7 +737,7 @@ EOL;
      */
     public function storeCitationLearningMaterialMeta ($title, $citation, $description, $statusId,
                                                 $creator, $ownerRoleId, $courseId, $sessionId,
-                                                $userId, &$auditAtoms)
+                                                $userId, $token, &$auditAtoms)
     {
         $newRow = array();
         $newRow['learning_material_id'] = null;
@@ -741,6 +757,7 @@ EOL;
         $newRow['description'] = $description;
         $newRow['learning_material_status_id'] = $statusId;
         $newRow['learning_material_user_role_id'] = $ownerRoleId;
+        $newRow['token'] = $token;
 
         $this->db->insert($this->databaseTableName, $newRow);
         $newId = $this->db->insert_id();
@@ -757,9 +774,8 @@ EOL;
                 }
             }
 
-            array_push($auditAtoms, $this->auditEvent->wrapAtom($newId, 'learning_material_id',
-                                                                $this->databaseTableName,
-                                                                Ilios_Model_AuditUtils::CREATE_EVENT_TYPE, 1));
+            $auditAtoms[] = Ilios_Model_AuditUtils::wrapAuditAtom($newId, 'learning_material_id',
+                $this->databaseTableName, Ilios_Model_AuditUtils::CREATE_EVENT_TYPE);
         }
         else {
             $newId = -1;
@@ -776,36 +792,36 @@ EOL;
      * @param array $auditAtoms
      */
     public function saveSessionLearningMaterialAssociations ($sessionId, $sessionLearningMaterials = array(),
-    		$associatedLearningMaterialIds = array(), &$auditAtoms = array())
+            $associatedLearningMaterialIds = array(), &$auditAtoms = array())
     {
-    	// figure out which associations need to be added, updated or removed.
-    	$keepAssocIds = array();
-    	$removeAssocIds = array();
-    	$addSessionLearningMaterials = array();
-    	$updateSessionLearningMaterials = array();
-    	if (! empty($associatedLearningMaterialIds)) {
-    		foreach ($sessionLearningMaterials as $item) {
-    			if (in_array($item['dbId'], $associatedLearningMaterialIds)) { // exists?
-    				$keepAssocIds[] = $item['dbId']; // flag as "to keep"
-    				$updateSessionLearningMaterials[] = $item;
-    			} else {
-    				$addSessionLearningMaterials[] = $item; // mark as to add
-    			}
-    		}
-    		$removeAssocIds = array_diff($associatedLearningMaterialIds, $keepAssocIds); // find the assoc. to remove
-    	} else {
-    	    $addSessionLearningMaterials = $sessionLearningMaterials; // mark all as "to be added"
-    	}
+        // figure out which associations need to be added, updated or removed.
+        $keepAssocIds = array();
+        $removeAssocIds = array();
+        $addSessionLearningMaterials = array();
+        $updateSessionLearningMaterials = array();
+        if (! empty($associatedLearningMaterialIds)) {
+            foreach ($sessionLearningMaterials as $item) {
+                if (in_array($item['dbId'], $associatedLearningMaterialIds)) { // exists?
+                    $keepAssocIds[] = $item['dbId']; // flag as "to keep"
+                    $updateSessionLearningMaterials[] = $item;
+                } else {
+                    $addSessionLearningMaterials[] = $item; // mark as to add
+                }
+            }
+            $removeAssocIds = array_diff($associatedLearningMaterialIds, $keepAssocIds); // find the assoc. to remove
+        } else {
+            $addSessionLearningMaterials = $sessionLearningMaterials; // mark all as "to be added"
+        }
 
-    	if (count($addSessionLearningMaterials)) { // add learning materials to session
-    		$this->_addSessionLearningMaterialAssociations($sessionId, $sessionLearningMaterials, $auditAtoms);
-    	}
-    	if (count($updateSessionLearningMaterials)) { // update session/learning materials assoc.
-    		$this->_updateSessionLearningMaterialAssociations($sessionId, $updateSessionLearningMaterials, $auditAtoms);
-    	}
-    	if (count($removeAssocIds)) { // remove learning materials from session
-    		$this->_deleteSessionLearningMaterialAssociations($sessionId, $removeAssocIds, $auditAtoms);
-    	}
+        if (count($addSessionLearningMaterials)) { // add learning materials to session
+            $this->_addSessionLearningMaterialAssociations($sessionId, $sessionLearningMaterials, $auditAtoms);
+        }
+        if (count($updateSessionLearningMaterials)) { // update session/learning materials assoc.
+            $this->_updateSessionLearningMaterialAssociations($sessionId, $updateSessionLearningMaterials, $auditAtoms);
+        }
+        if (count($removeAssocIds)) { // remove learning materials from session
+            $this->_deleteSessionLearningMaterialAssociations($sessionId, $removeAssocIds, $auditAtoms);
+        }
     }
 
     /**
@@ -815,36 +831,36 @@ EOL;
      * @param array $auditAtoms
      */
     protected function _addSessionLearningMaterialAssociations ( $sessionId,
-    		$sessionLearningMaterials = array(), &$auditAtoms = array())
+            $sessionLearningMaterials = array(), &$auditAtoms = array())
     {
-    	$lmiCache = array();
-    	foreach ($sessionLearningMaterials as $material) {
-    		// SANITY CHECK
-    		// prevent the same learning material from
-    		// being associated with the given session twice
-    	    if (in_array($material['dbId'], $lmiCache)) {
-    		    continue;
-    		}
+        $lmiCache = array();
+        foreach ($sessionLearningMaterials as $material) {
+            // SANITY CHECK
+            // prevent the same learning material from
+            // being associated with the given session twice
+            if (in_array($material['dbId'], $lmiCache)) {
+                continue;
+            }
 
-    	    $row = array();
-    		$row['session_id'] = $sessionId;
-    		$row['learning_material_id'] = $material['dbId'];
-    		$row['notes'] = $material['notes'];
-    		$row['required'] = (int ) $material['required'];
-    		$row['notes_are_public'] = (int) $material['notesArePubliclyViewable'];
-    		$this->db->insert('session_learning_material', $row);
+            $row = array();
+            $row['session_id'] = $sessionId;
+            $row['learning_material_id'] = $material['dbId'];
+            $row['notes'] = $material['notes'];
+            $row['required'] = (int ) $material['required'];
+            $row['notes_are_public'] = (int) $material['notesArePubliclyViewable'];
+            $this->db->insert('session_learning_material', $row);
 
-    		// @todo add error handling
-    		$sessionLearningMaterialId = $this->db->insert_id();
+            // @todo add error handling
+            $sessionLearningMaterialId = $this->db->insert_id();
 
-    		$lmiCache[] = $material['dbId'];
+            $lmiCache[] = $material['dbId'];
 
-    		// add mesh term associations
-    		if ($sessionLearningMaterialId && ! empty($material['meshTerms'])) {
-    			$this->_saveSessionLearningMaterialMeshTermAssociations($sessionLearningMaterialId,
-    					$material['meshTerms'], array(), $auditAtoms);
-    		}
-    	}
+            // add mesh term associations
+            if ($sessionLearningMaterialId && ! empty($material['meshTerms'])) {
+                $this->_saveSessionLearningMaterialMeshTermAssociations($sessionLearningMaterialId,
+                        $material['meshTerms'], array(), $auditAtoms);
+            }
+        }
     }
 
     /**
@@ -855,7 +871,7 @@ EOL;
      * @todo implement audit trail
      */
     protected function _deleteSessionLearningMaterialAssociations ($sessionId,
-    		$learningMaterialIds = array(), &$auditAtoms = array())
+            $learningMaterialIds = array(), &$auditAtoms = array())
     {
         $this->_disassociateFromJoinTable('session_learning_material', 'session_id',
                 $sessionId, 'learning_material_id', $learningMaterialIds);
@@ -863,57 +879,208 @@ EOL;
 
     /**
      * Updates given session/learning materials associations.
+     *
+     * @param int $sessionId
      * @param array $sessionLearningMaterials
      * @param array $auditAtoms
-     * @todo implement audit trail
      */
-    protected function _updateSessionLearningMaterialAssociations ( $sessionId,
-    		$sessionLearningMaterials = array(), &$auditAtoms = array())
+    protected function _updateSessionLearningMaterialAssociations ($sessionId, $sessionLearningMaterials = array(),
+                                                                   &$auditAtoms = array())
     {
-    	foreach ($sessionLearningMaterials as $material) {
-    		// retrieve the identifier of the given session learning material
-    		$sessionLearningMaterialId = $this->_getSessionLearningMaterialId($sessionId, $material['dbId']);
-    		// if no session learning material id was found, then we are essentially hosed.
-    		// this should have been caught further upstream.
-    		// for now, we just ignore this record and move on.
-    		// @todo implement better exception handling
-    		if (empty($sessionLearningMaterialId)) {
-    			continue;
-    		}
+        foreach ($sessionLearningMaterials as $material) {
+            // retrieve the identifier of the given session learning material
+            $sessionLearningMaterialId = $this->_getSessionLearningMaterialId($sessionId, $material['dbId']);
+            // if no session learning material id was found, then we are essentially hosed.
+            // this should have been caught further upstream.
+            // for now, we just ignore this record and move on.
+            // @todo implement better exception handling
+            if (empty($sessionLearningMaterialId)) {
+                continue;
+            }
 
-    		$row = array();
-    		$row['notes'] = $material['notes'];
-    		$row['required'] = $material['required'] ? 1 : 0;
-    		$row['notes_are_public'] = $material['notesArePubliclyViewable'] ? 1 : 0;
+            $row = array();
+            $row['notes'] = $material['notes'];
+            $row['required'] = $material['required'] ? 1 : 0;
+            $row['notes_are_public'] = $material['notesArePubliclyViewable'] ? 1 : 0;
 
-    		$this->db->where('session_learning_material_id', $sessionLearningMaterialId);
-    		$this->db->update('session_learning_material', $row);
+            $this->db->where('session_learning_material_id', $sessionLearningMaterialId);
+            $this->db->update('session_learning_material', $row);
 
-    		// update mesh term associations
-    		if (! empty($material['meshTerms'])) {
-    			$associatedMeshTermIds = $this->getIdArrayFromCrossTable('session_learning_material_x_mesh',
-    					'mesh_descriptor_uid', 'session_learning_material_id', $sessionLearningMaterialId);
-    			$this->_saveSessionLearningMaterialMeshTermAssociations($sessionLearningMaterialId,
-    					$material['meshTerms'], $associatedMeshTermIds, $auditAtoms);
-    		}
-    	}
+            // update mesh term associations
+            if (! empty($material['meshTerms'])) {
+                $associatedMeshTermIds = $this->getIdArrayFromCrossTable('session_learning_material_x_mesh',
+                        'mesh_descriptor_uid', 'session_learning_material_id', $sessionLearningMaterialId);
+                $this->_saveSessionLearningMaterialMeshTermAssociations($sessionLearningMaterialId,
+                        $material['meshTerms'], $associatedMeshTermIds, $auditAtoms);
+            }
+        }
     }
 
     /**
      * Saves the session-learning-material/mesh-term associations for a given session learning material
      * and given mesh terms, taken given pre-existings associations into account.
      *
-     * @param int $sessionId the session id
+     * @param int $sessionLearningMaterialId the session id
      * @param array $meshTerms nested array of mesh terms
-     * @param array|NULL $associatedMeshTermIds ids of mesh terms already associated with the given session
+     * @param array $associatedMeshTermIds ids of mesh terms already associated with the given session
      * @param array $auditAtoms audit trail
      */
-    protected function _saveSessionLearningMaterialMeshTermAssociations (
-    		$sessionLearningMaterialId, $meshTerms = array(), $associatedMeshTermIds = array(),
-            array &$auditAtoms = array())
+    protected function _saveSessionLearningMaterialMeshTermAssociations ($sessionLearningMaterialId,
+                                                                         $meshTerms = array(),
+                                                                         $associatedMeshTermIds = array(),
+                                                                         array &$auditAtoms = array())
     {
-    	$this->_saveJoinTableAssociations('session_learning_material_x_mesh',
-    			'session_learning_material_id', $sessionLearningMaterialId,
-    			'mesh_descriptor_uid', $meshTerms, $associatedMeshTermIds, 'dbId', $auditAtoms);
+        $this->_saveJoinTableAssociations('session_learning_material_x_mesh',
+                'session_learning_material_id', $sessionLearningMaterialId,
+                'mesh_descriptor_uid', $meshTerms, $associatedMeshTermIds, 'dbId', $auditAtoms);
     }
+
+    /**
+     * Initiates the update of a given learning material and its associated data, such as associated mesh terms,
+     * notes, etc.
+     *
+     * @param int $courseOrSessionId the dbId of the respective course or session
+     * @param int $lmDbId the dbId of the learning material itself
+     * @param bool $isCourse true if it's a course, false if it's a session
+     * @param array $learningMaterials all the current learning materials for the respective course or session
+     * @param array $auditAtoms
+     */
+
+    public function updateLearningMaterial ($courseOrSessionId, $lmDbId, $isCourse,
+                                                    array $learningMaterials, array &$auditAtoms)
+    {
+        //initialize the return value
+        $rhett = null;
+
+        //add to the auditAtoms array
+        $auditAtoms[] = Ilios_Model_AuditUtils::wrapAuditAtom($courseOrSessionId, 'learning_material_id', $this->databaseTableName,
+            Ilios_Model_AuditUtils::UPDATE_EVENT_TYPE);
+
+        //loop through the learning materials to get the one we need
+        foreach ($learningMaterials as $learningMaterial) {
+            //Because we're receiving ALL of the course or session Learning Materials in the array, we only want to
+            //update the one that has changed. Compare the $_POST['lmDbId'] with the dbId in the array and, if it
+            //matches, send it to the update process...
+            if($learningMaterial['dbId'] == $lmDbId) {
+                //when we find the right one, process its attributes and meshTerms
+                $rhett = $this->learningMaterial->_processLearningMaterialUpdate($learningMaterial,
+                                                                                   $courseOrSessionId,
+                                                                                   $isCourse, $auditAtoms);
+            }
+        }
+
+        return $rhett;
+    }
+
+    /**
+     * Finalizes the updates of a given learning material for a course/session in the database.
+     *
+     * @param array $learningMaterial the single learning material that we're updating
+     * @param int $courseOrSessionId the id of the course or session we're dealing with
+     * @param bool $isCourse true if it is a course, false if it is a session
+     * @param array $auditAtoms - not sure we need this here, but maybe...
+     */
+    protected function _processLearningMaterialUpdate ($learningMaterial, $courseOrSessionId, $isCourse,
+                                                                  &$auditAtoms)
+    {
+        //initialize the return array
+        $rhett = array();
+
+        //prefix relevant table/column names with either 'course' or 'session' where appropriate
+        $db_prefix = ($isCourse) ? 'course' : 'session';
+
+        //get the dbId of the learning material
+        $lmDbId = $learningMaterial['dbId'];
+
+        //Then handle the MeSHTerms
+        //get the unique course/session_learning_material_id that identifies the association between lmId and
+        //a course or session id
+        $courseOrSessionLmId = $this->_getCourseOrSessionLearningMaterialId($lmDbId, $courseOrSessionId, $isCourse);
+
+        //set up the row for data update
+        $row = array();
+        $row['notes'] = $learningMaterial['notes'];
+        $row['required'] = $learningMaterial['required'] ? 1 : 0;
+        $row['notes_are_public'] = $learningMaterial['notesArePubliclyViewable'] ? 1 : 0;
+
+        //update everything but the MeSHTerms
+        $this->db->where('learning_material_id', $lmDbId);
+        $this->db->where($db_prefix . '_id', $courseOrSessionId);
+        $this->db->update($db_prefix . '_learning_material', $row);
+
+        //then handle the mesh terms -- separated out in order to work from mesh picker dialog as well.
+        $meshTerms = $learningMaterial['meshTerms'];
+
+        //first, to 'update' the MeSH terms without going through a tedious comparison, let's just empty all existing mesh
+        //term associations, and then re-add all of them again on the next step -- this ensures no duplication
+        //and that nullified/removed items are gone
+        $this->db->where($db_prefix . '_learning_material_id', $courseOrSessionLmId);
+        $this->db->delete($db_prefix . '_learning_material_x_mesh');
+
+        //clean up the meshTerms array, make sure to filter out duplicate values and ones that have been
+        //set to null upon being removed
+        $meshTermsFinal = array();
+        foreach ($meshTerms as $index => $value) {
+            //if the value of each MeSHTerm is not empty and does not already exist in the 'meshTermsFinal' array
+            if (!empty($value) && !in_array($value, $meshTermsFinal)){
+                //add it to the meshTermsFinal array for final processing
+                $meshTermsFinal[] = $value;
+            }
+        }
+
+        //now all mesh terms should have a value and there should be no duplicates, so process the
+        //the ones that still exist
+        if (! empty($meshTermsFinal)) {
+
+            $newRow = array();
+            $newRow[$db_prefix . '_learning_material_id'] = $courseOrSessionLmId;
+
+            foreach ($meshTermsFinal as $meshTerm) {
+                $newRow['mesh_descriptor_uid'] = $meshTerm['dbId'];
+                $this->db->insert($db_prefix . '_learning_material_x_mesh', $newRow);
+
+                //audit the addition of new terms
+                if ($this->transactionAtomFailed()) {
+                    return false;
+                }
+
+                $auditAtoms[] = Ilios_Model_AuditUtils::wrapAuditAtom($courseOrSessionLmId, $db_prefix . '_learning_material_id',
+                    $db_prefix . '_learning_material_x_mesh', Ilios_Model_AuditUtils::CREATE_EVENT_TYPE);
+            }
+
+            //return the total number of meshterms
+            $rhett['meshTotal'] = count($meshTermsFinal);
+        }
+        else {
+
+            $rhett['meshTotal'] = 0;
+        }
+
+        return $rhett;
+    }
+
+    /**
+     * retrieves the learning material id from the course/session_learning_material table to
+     * reference for MeSHTerm insertions and updates
+     *
+     * @param int $lmDbId the dbId of the learning material itself
+     * @param int $courseOrSessionId the course or session id
+     * @param bool $isCourse true if it's a course, false if it's a session
+     * @return int|NULL the unique id of the course/session lm association row
+     */
+    protected function _getCourseOrSessionLearningMaterialId ($lmDbId, $courseOrSessionId, $isCourse)
+    {
+        $rhett = null;
+
+        //prefix relevant table/column names with either 'course' or 'session' where appropriate
+        $db_prefix = ($isCourse) ? 'course' : 'session';
+
+        $this->db->where($db_prefix . '_id', $courseOrSessionId);
+        $this->db->where('learning_material_id', $lmDbId);
+        $queryResults = $this->db->get($db_prefix . '_learning_material');
+        $rhett = $queryResults->first_row()->{$db_prefix . '_learning_material_id'};
+
+        return $rhett;
+    }
+
 }

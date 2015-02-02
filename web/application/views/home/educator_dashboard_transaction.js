@@ -13,7 +13,7 @@
  * home/dashboard_calendar_support.js
  */
 
-ilios.namespace('ilios.home.transaction');
+ilios.namespace('home.transaction');
 
 /**
  * This method is called via onDomReady and loads the recent activity of the user who is
@@ -68,7 +68,7 @@ ilios.home.transaction.loadRecentActivity = function () {
             activities = parsedObject.events;
             for (var i = 0; i < activities.length; i++) {
                 activity = activities[i];
-                jsDate = ilios.utilities.mySQLDateToDateObject(activity.time_stamp, true);
+                jsDate = ilios.utilities.mySQLDateToDateObject(activity.created_at, true);
                 dateString = jsDate.format('mmm d yyyy, h:MM t');
 
                 liElement = document.createElement('li');
@@ -170,7 +170,11 @@ ilios.home.transaction.savePreference = function (url, paramString, dialogToClos
                 return;
             }
 
-            ilios.global.preferencesModel.updateWithServerDispatchedObject(parsedObject.prefs);
+            if (! ilios.preferences.preferencesModel) {
+                ilios.preferences.installPreferencesModel();
+            }
+
+            ilios.preferences.preferencesModel.updateWithServerDispatchedObject(parsedObject.prefs);
 
             ilios.utilities.removeElementWithValue(ilios.alert.networkActivityI18NStrings,
                 'dashboard.saving_preferences');
@@ -504,12 +508,15 @@ ilios.home.transaction.loadReminderAlerts = function () {
             var container = null;
             var reminders = null;
             var reminder = null;
-            var ulElement = null;
-            var liElement = null;
-            var aElement = null;
+            var ulElement;
+            var liElement;
+            var aElement;
+            var spanElement;
             var overdueContainer = null;
             var overdueAlertFound = false;
             var reminderModel = null;
+            var overdueText;
+            var dateText;
 
             try {
                 parsedObject = YAHOO.lang.JSON.parse(resultObject.responseText);
@@ -554,37 +561,33 @@ ilios.home.transaction.loadReminderAlerts = function () {
                 liElement = document.createElement('li');
 
                 aElement = document.createElement('a');
+                aElement.setAttribute('class', 'alert-list-item-text truncate');
                 aElement.setAttribute('href', '');
                 aElement.setAttribute('onclick', 'return false;');
                 aElement.setAttribute('title', reminder.note);
-                aElement.innerHTML = ilios.lang.ellipsisedOfLength(reminder.note, 26);
+                aElement.appendChild(document.createTextNode(reminder.note));
                 aElement.iliosModel = reminderModel;
                 YAHOO.util.Event.addListener(aElement, 'click', function () {
-                    IEvent.fire({
+                    ilios.ui.onIliosEvent.fire({
                         action: 'ur_dialog_open',
                         reminder_model: this.iliosModel
                     });
                 });
 
-                liElement.appendChild(aElement);
-
-                aElement = document.createElement('span');
+                spanElement = document.createElement('span');
                 if (reminderModel.isOverdue()) {
                     overdueAlertFound = true;
-                    aElement.setAttribute('style',
-                        'font-size: 8pt; font-weight: bold; color: #ee0a0a;');
-                    aElement.innerHTML
-                        = ' ('
-                        + ilios_i18nVendor.getI18NString('general.terms.overdue').toLowerCase()
-                        + ')';
+                    spanElement.setAttribute('class', 'alert-due-date-late');
+                    overdueText = ilios_i18nVendor.getI18NString('general.terms.overdue').toLowerCase();
+                    spanElement.appendChild(document.createTextNode('(' + overdueText + ')'));
                 }
                 else {
-                    aElement.setAttribute('style', 'font-size: 8pt; color: #A1A3A3;');
-                    aElement.innerHTML = ' (' + reminderModel.getDueDate().format('m/dd/yyyy')
-                        + ')';
+                    spanElement.setAttribute('class', 'alert-due-date');
+                    dateText = reminderModel.getDueDate().format('m/dd/yyyy');
+                    spanElement.appendChild(document.createTextNode('(' + dateText + ')'));
                 }
                 liElement.appendChild(aElement);
-
+                liElement.appendChild(spanElement);
                 container.appendChild(liElement);
             }
 
@@ -688,7 +691,7 @@ ilios.home.transaction.loadReports = function () {
                 aElement.setAttribute('target', '_new');
                 aElement.setAttribute('onclick', 'return false;');
                 Event.addListener(aElement, 'click', function () {
-                    IEvent.fire({
+                    ilios.ui.onIliosEvent.fire({
                         action: 'report_results_dialog_open',
                         report: this.iliosModel
                     });
